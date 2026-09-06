@@ -762,6 +762,26 @@ body::before{
 @media(max-width:680px){.geo-head-v9{align-items:flex-start;flex-direction:column}.geo-tools-v9{justify-content:flex-start;width:100%}.geo-tool-v9{flex:1}.geo-tool-v9 select{width:100%!important}.geo-layout-v9{padding:6px 9px 10px}.geo-map-panel-v9{min-height:390px}.geo-side-v9{display:flex}.multi-item{grid-template-columns:1fr 70px}.multi-item>div:nth-child(3),.multi-item>div:nth-child(4){grid-column:auto}.multi-item-remove{grid-column:2}.multi-order-summary{grid-template-columns:1fr 1fr}}
 </style>
 
+
+<style id="perf-v95-style">
+.panel.perf-loading-v95{opacity:.72;transition:opacity .18s ease}.panel.perf-loading-v95::before{content:"Atualizando…";position:fixed;right:22px;bottom:22px;z-index:999;background:#171717;border:1px solid rgba(213,179,71,.35);color:#d5b347;padding:8px 12px;border-radius:999px;font:600 11px var(--font-body);box-shadow:0 10px 35px rgba(0,0,0,.28)}
+</style>
+
+<style id="v96-style">
+.page-actions-v96{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.order-card-actions-v96{display:flex;align-items:center;gap:7px;margin-left:8px;flex:0 0 auto}
+.order-edit-v96{white-space:nowrap}
+.v96-auto-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.v96-auto-stat{background:#101214;border:1px solid #292c30;border-radius:11px;padding:10px 11px;min-width:0}
+.v96-auto-stat span{display:block;color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.v96-auto-stat b{display:block;font-size:14px;color:var(--text);font-family:var(--font-display)}
+.v96-auto-stat.emph b{color:var(--accent)}
+.v96-auto-note{margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid rgba(213,179,71,.18);background:rgba(213,179,71,.055);font-size:10px;color:#94968f;line-height:1.5}
+.v96-auto-note strong{color:#d5b347}
+.v96-traffic-toggle{margin-top:12px}
+.v96-month-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;background:rgba(213,179,71,.1);border:1px solid rgba(213,179,71,.22);color:#d5b347;font-size:9px;font-weight:700}
+@media(max-width:760px){.page-actions-v96{width:100%;justify-content:stretch}.page-actions-v96 .btn{flex:1}.v96-auto-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.order-card-actions-v96{margin-left:0}.order-edit-v96{padding:7px!important}.order-edit-v96 span{display:none}}
+</style>
 </head>
 <body>
 
@@ -946,7 +966,10 @@ body::before{
         <h2>Investimentos em anúncios</h2>
         <p>Abra uma verba, acompanhe o ciclo e feche com gasto real, sessões, carrinhos, compras e faturamento atribuído. O financeiro usa apenas o gasto efetivamente realizado.</p>
       </div>
-      <button class="btn primary" onclick="abrirModalNovoInvestimento()"><i class="ti ti-plus"></i>Novo investimento</button>
+      <div class="page-actions-v96">
+        <button class="btn" onclick="abrirTrafegoMensalV96()"><i class="ti ti-calendar-dollar"></i>Lançar tráfego mensal</button>
+        <button class="btn primary" onclick="abrirModalNovoInvestimento()"><i class="ti ti-plus"></i>Novo investimento</button>
+      </div>
     </div>
 
     <div id="ads-schema-alert" class="notice hidden"></div>
@@ -2772,7 +2795,7 @@ function renderDashboard(){
 
 
 // ─── INIT ─────────────────────────────────────────────────────
-checarSessao();
+// V9.5: inicialização adiada para o fim do documento, após os overrides de performance.
 </script>
 <div class="drawer-overlay hidden" id="drawer-overlay" onclick="if(event.target===this)fecharDrawer()">
   <nav class="drawer">
@@ -2946,7 +2969,289 @@ async function addVenda(){if(!pedidosSchemaV8){alert('A estrutura de pedidos V8 
 
 // Correct the search placeholder to match order-level UX.
 document.addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('busca-vendas');if(b)b.placeholder='Buscar pedido, cliente, produto ou estado...'});
+
+
+// ═══════════════════════════════════════════════════════════════
+// V9.5 · PERFORMANCE — cache instantâneo + carga progressiva
+// ═══════════════════════════════════════════════════════════════
+const PERF_V95_KEY='areia_croa_crm_v95_cache';
+const PERF_V95_TTL=1000*60*60*24*7;
+const perfV95={loaded:new Set(),loading:new Map(),cacheHit:false,lastSync:0};
+
+function perfStatusV95(txt){const el=document.getElementById('status-conexao');if(el)el.textContent=txt}
+function perfActiveTabV95(){const p=document.querySelector('.panel.active');return p?.id?.replace(/^panel-/,'')||'dashboard'}
+function perfSafeArrayV95(v){return Array.isArray(v)?v:[]}
+function perfSnapshotV95(){
+  return {
+    savedAt:Date.now(),
+    pedidos:perfSafeArrayV95(cache.pedidos),
+    anuncios:perfSafeArrayV95(cache.anuncios),
+    metas:perfSafeArrayV95(cache.metas),
+    estadoView:perfSafeArrayV95(cache.estadoView),
+    produtos:perfV95.loaded.has('produtos')?perfSafeArrayV95(cache.produtos):undefined,
+    vendas:perfV95.loaded.has('vendas')?perfSafeArrayV95(cache.vendas):undefined,
+    clientes:perfV95.loaded.has('clientes')?perfSafeArrayV95(cache.clientes):undefined,
+    embalagens:perfV95.loaded.has('embalagens')?perfSafeArrayV95(cache.embalagens):undefined,
+    carrinhos:perfV95.loaded.has('carrinhos')?perfSafeArrayV95(cache.carrinhosAbandonados):undefined
+  };
+}
+function perfSaveV95(){
+  try{localStorage.setItem(PERF_V95_KEY,JSON.stringify(perfSnapshotV95()))}catch(e){console.warn('[V9.5] cache local indisponível',e)}
+}
+function perfLoadV95(){
+  try{
+    const raw=localStorage.getItem(PERF_V95_KEY);if(!raw)return false;
+    const x=JSON.parse(raw);if(!x||!x.savedAt||Date.now()-x.savedAt>PERF_V95_TTL){localStorage.removeItem(PERF_V95_KEY);return false}
+    if(Array.isArray(x.pedidos)){cache.pedidos=x.pedidos;perfV95.loaded.add('pedidos')}
+    if(Array.isArray(x.anuncios)){cache.anuncios=x.anuncios;perfV95.loaded.add('anuncios')}
+    if(Array.isArray(x.metas)){cache.metas=x.metas;perfV95.loaded.add('metas')}
+    if(Array.isArray(x.estadoView)){cache.estadoView=x.estadoView}
+    if(Array.isArray(x.produtos)){cache.produtos=x.produtos;perfV95.loaded.add('produtos')}
+    if(Array.isArray(x.vendas)){cache.vendas=x.vendas;perfV95.loaded.add('vendas')}
+    if(Array.isArray(x.clientes)){cache.clientes=x.clientes;perfV95.loaded.add('clientes')}
+    if(Array.isArray(x.embalagens)){cache.embalagens=x.embalagens;perfV95.loaded.add('embalagens')}
+    if(Array.isArray(x.carrinhos)){cache.carrinhosAbandonados=x.carrinhos;perfV95.loaded.add('carrinhos')}
+    pedidosSchemaV8=Array.isArray(cache.pedidos);
+    adsSchemaV2=Array.isArray(cache.anuncios);
+    cartsSchemaV7=Array.isArray(cache.carrinhosAbandonados);
+    perfV95.cacheHit=true;perfV95.lastSync=x.savedAt;
+    return perfV95.loaded.has('pedidos');
+  }catch(e){console.warn('[V9.5] erro ao ler cache',e);return false}
+}
+
+// O dashboard passa a ser 100% baseado em PEDIDOS, sem depender de carregar as linhas de vendas.
+function financeiroMes(ym){
+  const pedidos=pedidosBaseV9().filter(p=>getMes(p.data)===ym),receita=pedidos.reduce((s,p)=>s+Number(p.receita||0),0),custosOperacionais=pedidos.reduce((s,p)=>s+custoPedidoV9(p),0),trafegoReal=gastoAdsTotal(ym),abertos=anunciosNoPeriodo(ym,{status:'aberto'}),verbaAberta=abertos.reduce((s,a)=>s+orcamentoAnuncio(a),0),custoTotal=custosOperacionais+trafegoReal,resultado=receita-custoTotal,margem=receita>0?resultado/receita*100:0,resultadoProjetado=resultado-verbaAberta,margemProjetada=receita>0?resultadoProjetado/receita*100:0;
+  return{vendas:pedidos,receita,custosOperacionais,trafegoReal,verbaAberta,custoTotal,resultado,margem,resultadoProjetado,margemProjetada,abertos:abertos.length};
+}
+function gastoAdsLegadoVendasMes(ym){
+  const base=pedidosBaseV9();
+  if(base.length)return base.filter(p=>getMes(p.data)===ym).reduce((s,p)=>s+Number(p.anuncio||0),0);
+  return (cache.vendas||[]).filter(v=>getMes(v.data)===ym).reduce((s,v)=>s+Number(v.anuncio||0),0);
+}
+function gastoAdsTotal(fm){
+  if(fm){const externo=gastoAdsExternoMes(fm);return externo>0?externo:gastoAdsLegadoVendasMes(fm)}
+  const meses=new Set();pedidosBaseV9().forEach(p=>getMes(p.data)&&meses.add(getMes(p.data)));(cache.anuncios||[]).forEach(a=>getMes(a.data)&&meses.add(getMes(a.data)));
+  return [...meses].reduce((s,ym)=>{const externo=gastoAdsExternoMes(ym);return s+(externo>0?externo:gastoAdsLegadoVendasMes(ym))},0);
+}
+
+async function perfOnceV95(key,fn,force=false){
+  if(!force&&perfV95.loaded.has(key))return;
+  if(perfV95.loading.has(key))return perfV95.loading.get(key);
+  const p=(async()=>{try{await fn();perfV95.loaded.add(key);perfSaveV95()}finally{perfV95.loading.delete(key)}})();
+  perfV95.loading.set(key,p);return p;
+}
+async function carregarResumoV95({silent=false}={}){
+  if(!silent)perfStatusV95(perfV95.cacheHit?'Atualizando em segundo plano…':'Carregando resumo…');
+  const t0=performance.now();
+  const [ped,anun,met]=await Promise.all([
+    sb.from('pedidos').select('id,referencia,data,canal,cliente_nome,cliente_email,cliente_telefone,estado,cidade,receita,custo_produtos,frete,custo_embalagens,taxas,anuncio,custo_total,lucro,itens,via_trafego,status,origem_dados,observacoes,created_at,updated_at').order('data',{ascending:false}),
+    sb.from('anuncios').select('id,tipo,data,plataforma,descricao,valor,valor_planejado,valor_gasto,status,data_fim,sessoes,carrinhos_qtd,vendas_qtd,receita_atribuida').order('data',{ascending:false}),
+    sb.from('metas_mensais').select('id,mes,ano,investimento_previsto,faturamento_previsto').order('ano',{ascending:false}).order('mes',{ascending:false})
+  ]);
+  if(ped.error)throw ped.error;if(anun.error)console.warn('[V9.5] anúncios',anun.error);if(met.error)console.warn('[V9.5] metas',met.error);
+  cache.pedidos=ped.data||[];cache.anuncios=anun.data||[];cache.metas=met.data||[];cache.pedidosErro=null;cache.estadoViewErro=null;
+  pedidosSchemaV8=true;adsSchemaV2=!anun.error;perfV95.loaded.add('pedidos');perfV95.loaded.add('anuncios');perfV95.loaded.add('metas');perfV95.lastSync=Date.now();perfSaveV95();
+  popularSelectMes();renderDashboard();
+  if(perfActiveTabV95()==='anuncios')renderAnuncios();if(perfActiveTabV95()==='metas'&&perfV95.loaded.has('vendas'))renderMetas();
+  perfStatusV95(`Atualizado agora · ${(performance.now()-t0).toFixed(0)} ms`);
+}
+
+async function carregarProdutosV95(force=false){return perfOnceV95('produtos',async()=>{const r=await sb.from('produtos').select('id,nome,custo,preco,estoque').order('nome');if(r.error)throw r.error;cache.produtos=r.data||[]},force)}
+async function carregarClientesV95(force=false){return perfOnceV95('clientes',async()=>{const r=await sb.from('clientes').select('*').order('nome');if(r.error)throw r.error;cache.clientes=r.data||[]},force)}
+async function carregarEmbalagensV95(force=false){return perfOnceV95('embalagens',async()=>{const r=await sb.from('embalagens').select('*').order('nome');if(r.error)throw r.error;cache.embalagens=r.data||[]},force)}
+async function carregarCarrinhosV95(force=false){return perfOnceV95('carrinhos',async()=>{const r=await sb.from('carrinhos_abandonados').select('*').order('data_criacao',{ascending:false});if(r.error)throw r.error;cache.carrinhosAbandonados=r.data||[];cartsSchemaV7=true},force)}
+async function carregarVendasV95(force=false){
+  return perfOnceV95('vendas',async()=>{
+    const [vend,vendEmb]=await Promise.all([sb.from('vendas').select('*').order('data',{ascending:false}),sb.from('venda_embalagens').select('*')]);if(vend.error)throw vend.error;
+    const embPorVenda={};(vendEmb.data||[]).forEach(e=>{(embPorVenda[e.venda_id]||=[]).push(e)});cache.vendas=(vend.data||[]).map(v=>({...v,embalagens:embPorVenda[v.id]||[]}));salesTrafficSchemaV5=true;salesStateSchemaV6=true;
+  },force)
+}
+
+async function carregarAbaV95(id,force=false){
+  try{
+    if(id==='dashboard'){if(force)await carregarResumoV95({silent:true});return}
+    if(id==='produtos'){await carregarProdutosV95(force);renderProdutos();populateProdutoSelect();return}
+    if(id==='embalagens'){await carregarEmbalagensV95(force);renderEmbalagens();renderEmbChecks();return}
+    if(id==='clientes'){await carregarClientesV95(force);renderClientes();populateListaClientes();return}
+    if(id==='vendas'||id==='historico'){
+      await Promise.all([carregarVendasV95(force),carregarProdutosV95(force),carregarClientesV95(force)]);if(id==='vendas')renderVendas();else renderHistorico();populateProdutoSelect();populateListaClientes();return
+    }
+    if(id==='anuncios'){await carregarCarrinhosV95(force);renderAnuncios();renderCarrinhosAbandonados();return}
+    if(id==='metas'){await carregarVendasV95(force);renderMetas();return}
+    if(id==='marcos'){renderMarcosV95();return}
+  }catch(e){console.error('[V9.5] erro ao carregar aba',id,e);perfStatusV95('Falha ao sincronizar esta área')}
+}
+function renderMarcosV95(){
+  const totalAcumulado=pedidosBaseV9().reduce((s,p)=>s+Number(p.receita||0),0),proximoTier=MARCOS_TIERS.find(t=>t>totalAcumulado)||MARCOS_TIERS[MARCOS_TIERS.length-1],faltam=Math.max(0,proximoTier-totalAcumulado),ja=totalAcumulado>=MARCOS_TIERS[MARCOS_TIERS.length-1],box=document.getElementById('marcos-resumo'),lista=document.getElementById('marcos-lista');
+  if(box)box.innerHTML=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todos os marcos foram atingidos! ✦':`Próximo marco: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;
+  let anterior=0;if(lista)lista.innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Marco atingido':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');setTimeout(()=>animarNumeros(document.getElementById('panel-marcos')),20)
+}
+
+// Renderiza só o que está visível. Nada de reconstruir 9 abas a cada mudança.
+function renderAll(){
+  popularSelectMes();renderDashboard();const id=perfActiveTabV95();if(id!=='dashboard')carregarAbaV95(id);instalarMicroInteracoes();
+}
+
+const trocarAbaOriginalV95=trocarAba;
+trocarAba=async function(id,btn){
+  trocarAbaOriginalV95(id,btn);const panel=document.getElementById('panel-'+id);if(panel)panel.classList.add('perf-loading-v95');
+  await carregarAbaV95(id);if(panel)panel.classList.remove('perf-loading-v95');
+};
+
+// Recarregar agora significa: resumo + apenas a aba em uso.
+async function carregarTudo(){
+  const tab=perfActiveTabV95();perfStatusV95('Sincronizando alterações…');
+  await carregarResumoV95({silent:true});if(tab!=='dashboard')await carregarAbaV95(tab,true);perfSaveV95();perfStatusV95('Dados sincronizados · V9.5 rápido');
+}
+
+const abrirModalPedidoOriginalV95=abrirModalPedidoV9;
+abrirModalPedidoV9=async function(id){if(!perfV95.loaded.has('vendas'))await carregarVendasV95();return abrirModalPedidoOriginalV95(id)};
+const abrirModalNovaVendaOriginalV95=abrirModalNovaVenda;
+abrirModalNovaVenda=async function(){
+  if(!perfV95.loaded.has('produtos')||!perfV95.loaded.has('clientes')){perfStatusV95('Preparando cadastro…');await Promise.all([carregarProdutosV95(),carregarClientesV95()]);perfStatusV95('Dados sincronizados · V9.5 rápido')}
+  return abrirModalNovaVendaOriginalV95();
+};
+
+async function iniciarApp(){
+  document.getElementById('login-screen').classList.add('hidden');document.getElementById('app-root').classList.remove('hidden');const vd=document.getElementById('v-data');if(vd)vd.value=hoje();
+  const hit=perfLoadV95();
+  if(hit){popularSelectMes();renderDashboard();perfStatusV95('Dados locais · atualizando…')}
+  else perfStatusV95('Carregando resumo…');
+  carregarResumoV95({silent:hit}).catch(e=>{console.error('[V9.5] resumo',e);perfStatusV95(hit?'Offline · exibindo últimos dados':'Erro ao carregar dados')});
+  const idle=window.requestIdleCallback||((fn)=>setTimeout(fn,700));idle(()=>Promise.allSettled([carregarProdutosV95(),carregarClientesV95()]));
+}
+
+const sairOriginalV95=sair;
+sair=async function(){try{localStorage.removeItem(PERF_V95_KEY)}catch{}return sairOriginalV95()};
+
+// Inicia só agora, quando todos os overrides V9.5 já existem.
+document.addEventListener('DOMContentLoaded',()=>{checarSessao()},{once:true});
 </script>
 
+
+<script id="v9-6-trafego-monthly">
+// ═══════════════════════════════════════════════════════════════
+// V9.6 · TRÁFEGO MENSAL + ATRIBUIÇÃO POR PEDIDO
+// Corrige o botão de fechamento e usa PEDIDOS (não linhas) para ROAS.
+// ═══════════════════════════════════════════════════════════════
+
+function pedidoEhTrafegoV96(p){return p?.via_trafego===true||p?.via_trafego==='true'}
+function pedidosTrafegoMesV96(ym){return pedidosBaseV9().filter(p=>pedidoEhTrafegoV96(p)&&getMes(p.data)===ym)}
+function resumoTrafegoMesV96(ym,gasto=0,sessoes=0){
+  const pedidos=pedidosTrafegoMesV96(ym),receita=pedidos.reduce((s,p)=>s+Number(p.receita||0),0),compras=pedidos.length;
+  return{pedidos,compras,receita,gasto:Number(gasto)||0,sessoes:Number(sessoes)||0,roas:gasto>0?receita/gasto:0,cpa:compras>0?gasto/compras:0,conversao:sessoes>0?compras/sessoes*100:0,custoSessao:sessoes>0?gasto/sessoes:0};
+}
+function ultimoDiaMesV96(ym){const [y,m]=ym.split('-').map(Number);return `${ym}-${String(new Date(y,m,0).getDate()).padStart(2,'0')}`}
+function mesAtualV96(){return hoje().slice(0,7)}
+function ymAnuncioV96(a){return getMes(a?.data||'')||mesAtualV96()}
+
+// Todo cálculo de campanha passa a usar cabeçalhos de pedidos, evitando duplicar multivendas.
+function vendasTrafegoDoInvestimento(a){return pedidosTrafegoMesV96(ymAnuncioV96(a))}
+function calcAnuncio(a){
+  const planejado=orcamentoAnuncio(a),gasto=gastoAnuncio(a),fechado=statusAnuncio(a)==='fechado',baseRoas=baseRoasAnuncio(a),sessoes=Number(a.sessoes||0),pedidos=vendasTrafegoDoInvestimento(a),vendas=pedidos.length,receita=pedidos.reduce((s,p)=>s+Number(p.receita||0),0);
+  return{planejado,gasto,baseRoas,sessoes,carrinhos:0,vendas,receita,saldo:planejado-gasto,roas:baseRoas>0?receita/baseRoas:0,custoSessao:sessoes>0?(fechado?gasto:baseRoas)/sessoes:0,custoCarrinho:0,cpa:vendas>0?baseRoas/vendas:0,taxaCarrinho:0,taxaVenda:sessoes>0?vendas/sessoes*100:0,taxaCarrinhoVenda:0,receitaSessao:sessoes>0?receita/sessoes:0,parcial:!fechado};
+}
+
+function htmlResumoAutomaticoV96(d,ym){
+  return `<div class="v96-auto-grid">
+    <div class="v96-auto-stat"><span>Compras do tráfego</span><b>${d.compras.toLocaleString('pt-BR')}</b></div>
+    <div class="v96-auto-stat"><span>Receita do tráfego</span><b>${fmtVal(d.receita)}</b></div>
+    <div class="v96-auto-stat"><span>CPA</span><b>${fmtVal(d.cpa)}</b></div>
+    <div class="v96-auto-stat emph"><span>ROAS</span><b>${d.roas.toFixed(2)}x</b></div>
+    <div class="v96-auto-stat"><span>Conversão</span><b>${d.conversao.toFixed(2)}%</b></div>
+    <div class="v96-auto-stat"><span>Custo / sessão</span><b>${fmtVal(d.custoSessao)}</b></div>
+    <div class="v96-auto-stat"><span>Sessões</span><b>${d.sessoes.toLocaleString('pt-BR')}</b></div>
+    <div class="v96-auto-stat"><span>Competência</span><b>${mesLabel(ym)}</b></div>
+  </div>`;
+}
+
+// Corrige o fechamento: o botão anterior montava um onclick inválido e a V9.5 podia estar sem cache.vendas.
+function abrirModalFecharInvestimento(id){
+  if(!adsSchemaV2){alert('A estrutura de anúncios não está disponível.');return}
+  const a=cache.anuncios.find(x=>String(x.id)===String(id));if(!a)return;fechandoInvestimentoId=id;
+  const c=calcAnuncio(a),branding=tipoAnuncio(a)==='branding',ym=ymAnuncioV96(a);
+  document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()">&times;</button>
+  <div class="modal-header"><div><div class="modal-title">Fechar investimento</div><div class="modal-subtitle">${escHtml(anuncioTitulo(a))} · <span class="v96-month-badge"><i class="ti ti-calendar"></i>${mesLabel(ym)}</span></div></div></div>
+  <div class="form-grid col2"><div><label>Data de encerramento</label><input type="date" id="close-inv-data" value="${a.data_fim||ultimoDiaMesV96(ym)}"></div><div><label>Gasto real (R$)</label><input type="number" id="close-inv-gasto" min="0" step="0.01" value="${a.valor_gasto??''}" placeholder="395,00" oninput="previewFechamentoInvestimento()"></div>${branding?'':`<div style="grid-column:1/-1"><label>Sessões geradas</label><input type="number" id="close-inv-sessoes" min="0" step="1" value="${a.sessoes??''}" placeholder="1200" oninput="previewFechamentoInvestimento()"></div>`}</div>
+  ${branding?'<div class="notice" style="margin-top:8px"><i class="ti ti-info-circle"></i><div>Branding entra como custo do mês, mas não recebe ROAS.</div></div>':'<div id="close-inv-preview"></div>'}
+  <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn success" onclick="salvarFechamentoInvestimento(\'${String(a.id).replace(/'/g,"\\'")}\')"><i class="ti ti-lock"></i>Fechar ciclo</button></div>`;
+  abrirModalItem();previewFechamentoInvestimento(c.planejado);
+}
+function previewFechamentoInvestimento(){
+  const wrap=document.getElementById('close-inv-preview');if(!wrap)return;const a=cache.anuncios.find(x=>String(x.id)===String(fechandoInvestimentoId));if(!a)return;
+  const gasto=Number(document.getElementById('close-inv-gasto')?.value)||0,sessoes=Number(document.getElementById('close-inv-sessoes')?.value)||0,ym=ymAnuncioV96(a),d=resumoTrafegoMesV96(ym,gasto,sessoes);
+  wrap.innerHTML=htmlResumoAutomaticoV96(d,ym)+`<div class="v96-auto-note"><strong>Automático:</strong> compras e receita vêm dos pedidos de ${mesLabel(ym)} marcados como <strong>tráfego pago</strong>. Você só informa gasto real e sessões. Se estiver 0, edite os pedidos na aba Vendas e marque a origem correta.</div>`;
+}
+async function salvarFechamentoInvestimento(id){
+  const a=cache.anuncios.find(x=>String(x.id)===String(id));if(!a)return;
+  const gasto=Number(document.getElementById('close-inv-gasto')?.value)||0,sessoes=Number(document.getElementById('close-inv-sessoes')?.value)||0,data_fim=document.getElementById('close-inv-data')?.value||ultimoDiaMesV96(ymAnuncioV96(a));
+  if(gasto<=0){alert('Informe o gasto real para fechar o investimento.');return}
+  const ym=ymAnuncioV96(a),d=resumoTrafegoMesV96(ym,gasto,sessoes),sales=tipoAnuncio(a)==='vendas';
+  const row={valor_gasto:gasto,data_fim,status:'fechado',sessoes:sales?sessoes:null,carrinhos_qtd:null,vendas_qtd:sales?d.compras:null,receita_atribuida:sales?d.receita:null};
+  await checarErro(await sb.from('anuncios').update(row).eq('id',id),'Erro ao fechar investimento');
+  fecharModalItem();await carregarResumoV95({silent:true});renderDashboard();if(perfActiveTabV95()==='anuncios')renderAnuncios();perfSaveV95();
+}
+
+// Entrada consolidada para quem possui gasto e sessões por mês.
+function abrirTrafegoMensalV96(ymInicial=''){
+  const ym=ymInicial||document.getElementById('filter-mes-anuncios')?.value||mesAtualV96();
+  document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()">&times;</button>
+  <div class="modal-header"><div><div class="modal-title">Lançar tráfego mensal</div><div class="modal-subtitle">Preencha só o gasto real e as sessões. Compras, receita, CPA, ROAS e conversão são calculados automaticamente pelos pedidos do mês.</div></div></div>
+  <div class="form-grid col2"><div><label>Mês</label><input type="month" id="v96-mes" value="${ym}" onchange="previewTrafegoMensalV96()"></div><div><label>Plataforma</label><select id="v96-plataforma"><option>Meta Ads</option><option>Google Ads</option><option>TikTok Ads</option><option>Pinterest Ads</option><option>Outro</option></select></div><div><label>Gasto real do mês (R$)</label><input type="number" id="v96-gasto" min="0" step="0.01" placeholder="0,00" oninput="previewTrafegoMensalV96()"></div><div><label>Sessões do mês</label><input type="number" id="v96-sessoes" min="0" step="1" placeholder="0" oninput="previewTrafegoMensalV96()"></div></div>
+  <div id="v96-mensal-preview"></div>
+  <div class="v96-auto-note"><strong>Regra de atribuição:</strong> um pedido só entra em Compras/Receita do tráfego se estiver marcado como <strong>Pedido feito pelo tráfego pago</strong>. Isso impede que vendas orgânicas inflem o ROAS.</div>
+  <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn success" onclick="salvarTrafegoMensalV96()"><i class="ti ti-device-floppy"></i>Salvar mês</button></div>`;
+  abrirModalItem();previewTrafegoMensalV96();
+}
+function previewTrafegoMensalV96(){
+  const wrap=document.getElementById('v96-mensal-preview');if(!wrap)return;const ym=document.getElementById('v96-mes')?.value||mesAtualV96(),gasto=Number(document.getElementById('v96-gasto')?.value)||0,sessoes=Number(document.getElementById('v96-sessoes')?.value)||0,d=resumoTrafegoMesV96(ym,gasto,sessoes);wrap.innerHTML=htmlResumoAutomaticoV96(d,ym);
+}
+async function salvarTrafegoMensalV96(){
+  const ym=document.getElementById('v96-mes')?.value||'',gasto=Number(document.getElementById('v96-gasto')?.value)||0,sessoes=Number(document.getElementById('v96-sessoes')?.value)||0,plataforma=document.getElementById('v96-plataforma')?.value||'Meta Ads';
+  if(!/^\d{4}-\d{2}$/.test(ym)){alert('Selecione o mês.');return}if(gasto<=0){alert('Informe o gasto real do mês.');return}
+  const d=resumoTrafegoMesV96(ym,gasto,sessoes),existentes=anunciosNoPeriodo(ym,{tipo:'vendas'}),mensal=existentes.find(a=>String(a.descricao||'').startsWith('[MENSAL]'));
+  let target=mensal||null;
+  if(!target&&existentes.length===1)target=existentes[0];
+  if(!target&&existentes.length>1){alert(`Já existem ${existentes.length} investimentos de vendas em ${mesLabel(ym)}. Para não duplicar gasto, feche/edite cada campanha existente em vez de criar um consolidado.`);return}
+  const row={tipo:'vendas',data:`${ym}-01`,plataforma,descricao:target?(target.descricao||`[MENSAL] Tráfego ${mesLabel(ym)}`):`[MENSAL] Tráfego ${mesLabel(ym)}`,valor:gasto,valor_planejado:gasto,valor_gasto:gasto,status:'fechado',data_fim:ultimoDiaMesV96(ym),sessoes,carrinhos_qtd:null,vendas_qtd:d.compras,receita_atribuida:d.receita};
+  if(target)await checarErro(await sb.from('anuncios').update(row).eq('id',target.id),'Erro ao salvar tráfego mensal');else await checarErro(await sb.from('anuncios').insert(row),'Erro ao salvar tráfego mensal');
+  fecharModalItem();await carregarResumoV95({silent:true});popularSelectMes();
+  ['filter-mes','filter-mes-anuncios'].forEach(fid=>{const el=document.getElementById(fid);if(el&&[...el.options].some(o=>o.value===ym))el.value=ym});
+  renderDashboard();if(perfActiveTabV95()==='anuncios')renderAnuncios();perfSaveV95();
+}
+
+// Edição explícita do PEDIDO. É aqui que a atribuição de tráfego deve ser corrigida.
+function abrirEditarPedidoV96(id){
+  const p=pedidosBaseV9().find(x=>String(x.id)===String(id));if(!p)return;
+  const canais=['Shopify','Instagram','Presencial','Mercado Livre','WhatsApp','Outro'].map(c=>`<option ${c===p.canal?'selected':''}>${c}</option>`).join('');
+  document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()">&times;</button><div class="modal-header"><div><div class="modal-title">Editar pedido ${escHtml(p.referencia||'#'+p.id)}</div><div class="modal-subtitle">Corrija dados gerais e a origem da venda. Os valores dos produtos continuam sendo editados item a item.</div></div></div>
+  <div class="form-grid col2"><div><label>Data</label><input type="date" id="v96-ped-data" value="${p.data||hoje()}"></div><div><label>Canal</label><select id="v96-ped-canal">${canais}</select></div><div><label>Cliente</label><input id="v96-ped-cliente" value="${escHtml(p.cliente_nome||'')}"></div><div><label>Telefone</label><input id="v96-ped-tel" value="${escHtml(p.cliente_telefone||'')}"></div><div><label>Estado</label><select id="v96-ped-estado">${estadoOptionsV6(normalizeUFV6(p.estado))}</select></div><div><label>Cidade</label><input id="v96-ped-cidade" value="${escHtml(p.cidade||'')}"></div><div style="grid-column:1/-1"><label>Observação</label><input id="v96-ped-obs" value="${escHtml(p.observacoes||'')}"></div></div>
+  <div class="traffic-origin-box ${pedidoEhTrafegoV96(p)?'active':''} v96-traffic-toggle"><label class="traffic-origin-row" for="v96-ped-trafego"><span class="traffic-origin-icon"><i class="ti ti-ad"></i></span><span class="traffic-origin-copy"><strong>Pedido feito pelo tráfego pago</strong><small>Marcado = entra automaticamente em Compras, Receita, CPA e ROAS do mês.</small></span><input type="checkbox" id="v96-ped-trafego" ${pedidoEhTrafegoV96(p)?'checked':''}><span class="traffic-switch"><i></i></span></label></div>
+  <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn primary" onclick="salvarEditarPedidoV96(\'${String(p.id).replace(/'/g,"\\'")}\')"><i class="ti ti-check"></i>Salvar pedido</button></div>`;abrirModalItem();
+}
+async function salvarEditarPedidoV96(id){
+  const estado=normalizeUFV6(document.getElementById('v96-ped-estado')?.value),row={data:document.getElementById('v96-ped-data')?.value||hoje(),canal:document.getElementById('v96-ped-canal')?.value||'Outro',cliente_nome:document.getElementById('v96-ped-cliente')?.value.trim()||null,cliente_telefone:document.getElementById('v96-ped-tel')?.value.trim()||null,estado:estado||null,cidade:document.getElementById('v96-ped-cidade')?.value.trim()||null,observacoes:document.getElementById('v96-ped-obs')?.value.trim()||null,via_trafego:!!document.getElementById('v96-ped-trafego')?.checked};
+  await checarErro(await sb.from('pedidos').update(row).eq('id',id),'Erro ao editar pedido');
+  // Mantém as linhas compatíveis com o cabeçalho para telas/relatórios legados.
+  const child={data:row.data,canal:row.canal,estado:row.estado,cidade:row.cidade,via_trafego:row.via_trafego};
+  const r=await sb.from('vendas').update(child).eq('pedido_id',id);if(r.error)console.warn('[V9.6] não foi possível sincronizar linhas do pedido',r.error);
+  fecharModalItem();await carregarResumoV95({silent:true});renderDashboard();if(perfActiveTabV95()==='vendas')renderVendas();if(perfActiveTabV95()==='anuncios')renderAnuncios();perfSaveV95();
+}
+
+// Lista de Vendas com botão EDITAR visível (sem depender de abrir o detalhe primeiro).
+function renderVendas(){
+  const fm=document.getElementById('filter-mes-vendas')?.value||'',q=(document.getElementById('busca-vendas')?.value||'').toLowerCase().trim();let list=pedidosBaseV9().filter(p=>!fm||getMes(p.data)===fm);
+  if(q)list=list.filter(p=>`${p.referencia||''} ${p.cliente_nome||''} ${p.canal||''} ${p.estado||''} ${itensPedidoV9(p).map(v=>v.produto_nome).join(' ')}`.toLowerCase().includes(q));list.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const el=document.getElementById('lista-vendas');if(!el)return;el.innerHTML=list.length?list.map(p=>{const uf=normalizeUFV6(p.estado),luc=lucroPedidoV9(p),traf=pedidoEhTrafegoV96(p);return `<div class="venda-card" onclick="abrirModalPedidoV9('${p.id}')"><span class="venda-codigo">${escHtml(p.referencia||'#'+p.id)}</span><div class="venda-info"><div class="venda-produto">${escHtml(p.cliente_nome||'Pedido')}${Number(p.itens||1)>1?`<span class="order-badge-v9">${p.itens} itens</span>`:''}${traf?'<span class="traffic-sale-badge"><i class="ti ti-ad"></i> tráfego</span>':''}${uf?`<span class="uf-badge">${uf}</span>`:''}</div><div class="venda-meta">${fmtData(p.data)} · ${escHtml(p.canal||'Outro')}</div></div><div class="venda-valores"><div class="venda-receita">${fmtVal(p.receita)}</div><div class="venda-lucro" style="color:${luc>=0?'var(--success)':'var(--danger)'}">Lucro ${fmtVal(luc)}</div></div><div class="order-card-actions-v96"><button class="btn sm order-edit-v96" onclick="event.stopPropagation();abrirEditarPedidoV96('${p.id}')"><i class="ti ti-pencil"></i><span>Editar</span></button></div></div>`}).join(''):'<p class="empty">Nenhum pedido registrado.</p>';
+}
+
+// Detalhe também ganha botão de edição do pedido.
+function abrirModalPedidoV9(id){
+  const p=pedidosBaseV9().find(x=>sameIdV9(x.id,id));if(!p)return;const itens=itensPedidoV9(p),uf=normalizeUFV6(p.estado),luc=lucroPedidoV9(p),traf=pedidoEhTrafegoV96(p);
+  document.getElementById('modal-venda-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalVenda()">&times;</button><div class="modal-header"><div><span class="venda-codigo">${escHtml(p.referencia||'#'+p.id)}</span>${Number(p.itens||1)>1?`<span class="order-badge-v9"><i class="ti ti-layers-subtract"></i>${p.itens} itens</span>`:''}${traf?'<span class="traffic-sale-badge"><i class="ti ti-ad"></i> tráfego</span>':''}<div class="modal-title" style="margin-top:9px">${escHtml(p.cliente_nome||'Pedido')}</div><div class="modal-subtitle">${fmtData(p.data)} · ${escHtml(p.canal||'Outro')}${uf?' · '+escHtml(nomeEstadoV6(uf)):''}</div></div></div><div class="modal-section-label">Itens do pedido</div><div class="order-items-preview">${itens.length?itens.map(v=>`<div class="order-item-preview" onclick="abrirEdicaoVenda('${v.id}')" style="cursor:pointer"><span><strong>${Number(v.quantidade||1)}×</strong> ${escHtml(v.produto_nome)}</span><strong>${fmtVal(v.receita)}</strong></div>`).join(''):'<div class="order-item-preview"><span>Itens não vinculados.</span></div>'}</div><div class="modal-section-label">Financeiro do pedido</div><div class="modal-row"><span>Receita</span><span style="color:var(--success)">${fmtVal(p.receita)}</span></div><div class="modal-row"><span>Custo produtos</span><span>${fmtVal(p.custo_produtos)}</span></div><div class="modal-row"><span>Frete</span><span>${fmtVal(p.frete)}</span></div><div class="modal-row"><span>Embalagem</span><span>${fmtVal(p.custo_embalagens)}</span></div><div class="modal-row"><span>Taxas</span><span>${fmtVal(p.taxas)}</span></div><div class="modal-row"><span>Origem</span><span style="color:${traf?'var(--accent)':'var(--text)'}">${traf?'Tráfego pago':'Orgânico / não atribuído'}</span></div><div class="modal-total"><span>Lucro operacional</span><span style="color:${luc>=0?'var(--success)':'var(--danger)'}">${fmtVal(luc)}</span></div><div class="modal-actions"><button class="btn ghost" onclick="fecharModalVenda()">Fechar</button><button class="btn primary" onclick="fecharModalVenda();abrirEditarPedidoV96('${p.id}')"><i class="ti ti-pencil"></i>Editar pedido</button></div>`;
+  document.getElementById('modal-venda').classList.remove('hidden');document.body.classList.add('modal-open');
+}
+</script>
 </body>
 </html>
