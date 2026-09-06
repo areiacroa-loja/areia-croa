@@ -8,9 +8,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Arial,sans-serif;background:#f5f5f5;min-height:100vh;color:#212121}
+body{font-family:Arial,sans-serif;background:#f7f4ef;min-height:100vh;color:#212121}
 .app{max-width:1040px;margin:0 auto;padding:1.5rem 1rem}
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px}
+.topbar-brand{display:flex;align-items:center;gap:14px}
+.topbar-brand img{height:44px;width:auto;display:block}
 .topbar h1{font-size:18px;font-weight:700;color:#212121}
 .topbar small{font-size:12px;color:#888;display:block;margin-top:3px}
 .tabs{display:flex;gap:4px;background:#e8e8e8;border-radius:10px;padding:4px;margin-bottom:1.5rem;border:1px solid #ddd;overflow-x:auto}
@@ -25,7 +27,7 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;min-height:100vh;color:#212
 .card-value{font-size:20px;font-weight:700;color:#212121}
 .card-value.green{color:#1a7a44}
 .card-value.red{color:#c0392b}
-.card-value.blue{color:#185FA5}
+.card-value.blue{color:#947642}
 .card-value.amber{color:#854F0B}
 .card-value.purple{color:#6B21A8}
 .section-title{font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
@@ -39,11 +41,11 @@ body{font-family:Arial,sans-serif;background:#f5f5f5;min-height:100vh;color:#212
 @media(max-width:480px){.form-grid.col2,.form-grid.col3,.form-grid.col4,.form-grid.col5,.form-grid.col6{grid-template-columns:1fr}}
 label{font-size:12px;color:#666;display:block;margin-bottom:4px;font-weight:600}
 input,select,textarea{width:100%;height:36px;padding:0 10px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#212121;font-size:13px;font-family:Arial,sans-serif}
-input:focus,select:focus{outline:none;border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.15)}
+input:focus,select:focus{outline:none;border-color:#947642;box-shadow:0 0 0 3px rgba(148,118,66,.15)}
 .btn{height:36px;padding:0 14px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#212121;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;transition:background .1s;font-family:Arial,sans-serif;font-weight:600}
 .btn:hover{background:#f5f5f5}
-.btn.primary{background:#185FA5;color:#fff;border-color:#185FA5}
-.btn.primary:hover{background:#0c4478}
+.btn.primary{background:#B49764;color:#fff;border-color:#B49764}
+.btn.primary:hover{background:#947642}
 .btn.success{background:#1a7a44;color:#fff;border-color:#1a7a44}
 .btn.success:hover{background:#145c33}
 .btn.danger{color:#c0392b;border-color:rgba(192,57,43,.3)}
@@ -59,7 +61,7 @@ tbody tr:hover{background:#fafafa}
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700}
 .badge.entrada{background:#e8f5e9;color:#1a7a44}
 .badge.saida{background:#ffebee;color:#c0392b}
-.badge.venda{background:#e3f2fd;color:#185FA5}
+.badge.venda{background:#f2eadc;color:#947642}
 .empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
 .divider{height:1px;background:#f0f0f0;margin:1.5rem 0}
 .month-filter{display:flex;align-items:center;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
@@ -67,8 +69,8 @@ tbody tr:hover{background:#fafafa}
 .estoque-baixo{color:#c0392b;font-weight:700}
 .emb-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:6px}
 .emb-check-item{display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 10px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa;cursor:pointer;user-select:none}
-.emb-check-item input[type=checkbox]{width:16px;height:16px;accent-color:#185FA5;cursor:pointer;flex-shrink:0}
-.emb-check-item.checked{border-color:#185FA5;background:#f0f6ff}
+.emb-check-item input[type=checkbox]{width:16px;height:16px;accent-color:#947642;cursor:pointer;flex-shrink:0}
+.emb-check-item.checked{border-color:#947642;background:#f7f1e6}
 .custo-preview{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:1rem}
 .custo-preview .row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #f0f0f0}
 .custo-preview .row:last-child{border-bottom:none;font-weight:700;font-size:13px;padding-top:6px}
@@ -80,7 +82,7 @@ tbody tr:hover{background:#fafafa}
 .hidden{display:none !important}
 .meta-bar{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
 .meta-bar-track{height:10px;background:#f0f0f0;border-radius:999px;overflow:hidden}
-.meta-bar-fill{height:100%;background:#185FA5}
+.meta-bar-fill{height:100%;background:#B49764}
 </style>
 </head>
 <body>
@@ -97,9 +99,12 @@ tbody tr:hover{background:#fafafa}
 <!-- ═══ APP ═══ -->
 <div class="app hidden" id="app-root">
   <div class="topbar">
-    <div>
-      <h1><i class="ti ti-building-store" style="font-size:18px;vertical-align:-2px;margin-right:6px"></i>Areia Crôa — Controle Financeiro</h1>
-      <small id="status-conexao">Carregando dados...</small>
+    <div class="topbar-brand">
+      <img src="data:image/png;base64,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" alt="Areia Crôa">
+      <div>
+        <h1>Controle Financeiro</h1>
+        <small id="status-conexao">Carregando dados...</small>
+      </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" onclick="exportarCSV()"><i class="ti ti-table-export"></i>CSV</button>
@@ -116,6 +121,7 @@ tbody tr:hover{background:#fafafa}
     <button class="tab" onclick="trocarAba('anuncios',this)"><i class="ti ti-speakerphone"></i>Anúncios</button>
     <button class="tab" onclick="trocarAba('metricas',this)"><i class="ti ti-chart-line"></i>Métricas</button>
     <button class="tab" onclick="trocarAba('metas',this)"><i class="ti ti-target-arrow"></i>Metas</button>
+    <button class="tab" onclick="trocarAba('clientes',this)"><i class="ti ti-address-book"></i>Clientes</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -185,9 +191,14 @@ tbody tr:hover{background:#fafafa}
       <div><label>Canal</label><select id="v-canal"><option>Shopify</option><option>Instagram</option><option>Presencial</option><option>Mercado Livre</option><option>WhatsApp</option><option>Outro</option></select></div>
     </div>
     <div class="form-grid col4">
+      <div><label>Cliente (nome)</label><input type="text" id="v-cliente-nome" placeholder="Nome do cliente" list="lista-clientes"></div>
+      <div><label>Telefone do cliente</label><input type="text" id="v-cliente-tel" placeholder="(75) 99999-9999"></div>
+    </div>
+    <datalist id="lista-clientes"></datalist>
+    <div class="form-grid col4">
       <div>
         <label>Custo do produto (R$) <span id="v-custo-badge" style="font-size:10px;color:#aaa;font-weight:400"></span></label>
-        <input type="number" id="v-custo-prod" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()" style="border-color:#185FA5">
+        <input type="number" id="v-custo-prod" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()" style="border-color:#947642">
       </div>
       <div><label>Frete pago pela loja (R$)</label><input type="number" id="v-frete" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
       <div><label>Taxa gateway (R$)</label><input type="number" id="v-taxa" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
@@ -325,6 +336,35 @@ tbody tr:hover{background:#fafafa}
     <p class="section-title">Previsto x Realizado</p>
     <div id="metas-lista"></div>
   </div>
+
+  <!-- CLIENTES -->
+  <div id="panel-clientes" class="panel">
+    <p class="section-title">Cadastrar / editar cliente</p>
+    <div class="form-grid col4">
+      <div><label>Nome</label><input type="text" id="cli-nome" placeholder="Nome completo"></div>
+      <div><label>Telefone</label><input type="text" id="cli-telefone" placeholder="(75) 99999-9999"></div>
+      <div><label>E-mail</label><input type="email" id="cli-email" placeholder="cliente@email.com"></div>
+      <div><label>Cidade / Estado</label><input type="text" id="cli-cidade" placeholder="Ex: Feira de Santana, BA"></div>
+    </div>
+    <div class="form-grid col4" style="margin-top:-4px">
+      <div style="grid-column:1/3"><label>Observações</label><input type="text" id="cli-obs" placeholder="Preferências, tamanho, etc."></div>
+      <div style="grid-column:3/5"><label>&nbsp;</label><button class="btn primary" style="width:100%" onclick="addCliente()"><i class="ti ti-plus"></i>Salvar cliente</button></div>
+    </div>
+    <div class="divider"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <p class="section-title" style="margin:0">Clientes cadastrados</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input type="text" id="busca-clientes" placeholder="Buscar nome ou telefone..." oninput="renderClientes()" style="height:32px;font-size:12px;width:200px">
+        <button class="btn" onclick="exportarClientesCSV()"><i class="ti ti-table-export"></i>Exportar CSV</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Cidade</th><th>Compras</th><th>Total gasto</th><th style="width:40px"></th><th style="width:40px"></th></tr></thead>
+        <tbody id="tbody-clientes"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -337,7 +377,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_sx6-6HJenQSKk2aGEtjzNw_-ULohVIm';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // cache local dos dados (recarregado do Supabase após cada mutação relevante)
-let cache = { embalagens: [], produtos: [], vendas: [], anuncios: { carrinhos: [], diretas: [], branding: [] }, metricas: [], metas: [] };
+let cache = { embalagens: [], produtos: [], vendas: [], anuncios: { carrinhos: [], diretas: [], branding: [] }, metricas: [], metas: [], clientes: [] };
 
 // ─── HELPERS ──────────────────────────────────────────────────
 function s(id) { return document.getElementById(id).value.trim(); }
@@ -389,7 +429,7 @@ async function iniciarApp() {
 // ─── CARREGAR DADOS ─────────────────────────────────────────────
 async function carregarTudo() {
   document.getElementById('status-conexao').textContent = 'Sincronizando...';
-  const [emb, prod, vend, vendEmb, anun, metr, met] = await Promise.all([
+  const [emb, prod, vend, vendEmb, anun, metr, met, cli] = await Promise.all([
     sb.from('embalagens').select('*').order('nome'),
     sb.from('produtos').select('*').order('nome'),
     sb.from('vendas').select('*').order('data', { ascending: false }),
@@ -397,6 +437,7 @@ async function carregarTudo() {
     sb.from('anuncios').select('*').order('data', { ascending: false }),
     sb.from('metricas_diarias').select('*').order('data', { ascending: false }),
     sb.from('metas_mensais').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
+    sb.from('clientes').select('*').order('nome'),
   ]);
   cache.embalagens = emb.data || [];
   cache.produtos = prod.data || [];
@@ -407,6 +448,7 @@ async function carregarTudo() {
   (anun.data || []).forEach(a => cache.anuncios[a.tipo]?.push(a));
   cache.metricas = metr.data || [];
   cache.metas = met.data || [];
+  cache.clientes = cli.data || [];
   document.getElementById('status-conexao').textContent = 'Dados sincronizados com Supabase';
   renderAll();
 }
@@ -423,6 +465,8 @@ function renderAll() {
   renderAnuncios();
   renderMetricas();
   renderMetas();
+  renderClientes();
+  populateListaClientes();
 }
 
 // ─── ABAS ─────────────────────────────────────────────────────
@@ -531,7 +575,7 @@ function renderEmbalagens() {
       <td><strong>${e.nome}</strong></td>
       <td>${e.qtd_comprada}</td>
       <td>${fmtVal(e.valor_total)}</td>
-      <td style="color:#185FA5;font-weight:700">${fmtVal(e.custo_unit)}</td>
+      <td style="color:#947642;font-weight:700">${fmtVal(e.custo_unit)}</td>
       <td class="${baixo ? 'estoque-baixo' : ''}">${e.estoque}${baixo ? ' <span class="tag-warn">Baixo</span>' : ''}</td>
       <td><button class="btn sm" onclick="editarEstoqueEmbalagem('${e.id}')" title="Ajustar estoque"><i class="ti ti-pencil" style="font-size:13px"></i></button></td>
       <td><button class="btn danger sm" onclick="deletarEmbalagem('${e.id}')"><i class="ti ti-trash" style="font-size:13px"></i></button></td>
@@ -599,7 +643,7 @@ function renderProdutos() {
     const semCusto = !p.custo || p.custo === 0;
     const estoqueBaixo = (p.estoque || 0) <= 1;
     if (editandoProdutoId === p.id) {
-      return `<tr style="background:#f0f6ff">
+      return `<tr style="background:#f7f1e6">
         <td><input type="text" id="edit-nome-${p.id}" value="${p.nome}" style="height:30px;font-size:13px"></td>
         <td><input type="number" id="edit-custo-${p.id}" value="${p.custo || ''}" step="0.01" min="0" style="height:30px;font-size:13px"></td>
         <td><input type="number" id="edit-preco-${p.id}" value="${p.preco}" step="0.01" min="0" style="height:30px;font-size:13px"></td>
@@ -666,9 +710,10 @@ async function addVenda() {
   const obs = s('v-obs');
   const frete = n('v-frete'), taxa = n('v-taxa'), anuncio = n('v-anuncio'), custoProd = n('v-custo-prod');
   const embSelecionadas = getEmbalagensSelecionadas();
+  const clienteId = await upsertCliente(s('v-cliente-nome'), s('v-cliente-tel'));
 
   const vendaInsert = await checarErro(
-    await sb.from('vendas').insert({ data, produto_id: prodId, produto_nome: prod ? prod.nome : '?', canal, obs, receita, custo_prod: custoProd, custo_emb: custoEmbalagensSelecionadas(), frete, taxa, anuncio }).select().single(),
+    await sb.from('vendas').insert({ data, produto_id: prodId, produto_nome: prod ? prod.nome : '?', canal, obs, receita, custo_prod: custoProd, custo_emb: custoEmbalagensSelecionadas(), frete, taxa, anuncio, cliente_id: clienteId }).select().single(),
     'Erro ao registrar venda'
   );
 
@@ -680,10 +725,23 @@ async function addVenda() {
     }
   }
 
-  ['v-valor','v-frete','v-taxa','v-anuncio','v-obs','v-custo-prod'].forEach(id => document.getElementById(id).value = '');
+  ['v-valor','v-frete','v-taxa','v-anuncio','v-obs','v-custo-prod','v-cliente-nome','v-cliente-tel'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('v-produto').value = '';
   document.getElementById('v-custo-badge').textContent = '';
   await carregarTudo();
+}
+
+// cria o cliente se não existir (casando por telefone), ou retorna o id existente. Sem nome nem telefone, não vincula.
+async function upsertCliente(nome, telefone) {
+  if (!nome && !telefone) return null;
+  if (telefone) {
+    const existente = cache.clientes.find(c => c.telefone && c.telefone.replace(/\D/g,'') === telefone.replace(/\D/g,''));
+    if (existente) return existente.id;
+  }
+  if (!nome) return null;
+  const novo = await checarErro(await sb.from('clientes').insert({ nome, telefone: telefone || null }).select().single(), 'Erro ao salvar cliente');
+  cache.clientes.push(novo);
+  return novo.id;
 }
 
 async function deletarVenda(id) {
@@ -758,7 +816,7 @@ async function deletarAnuncio(id) {
 
 function renderAnuncios() {
   const cats = [
-    { key: 'carrinhos', label: 'Carrinhos', icon: 'ti-shopping-cart', color: '#185FA5' },
+    { key: 'carrinhos', label: 'Carrinhos', icon: 'ti-shopping-cart', color: '#B49764' },
     { key: 'diretas',   label: 'Vendas Diretas', icon: 'ti-bolt', color: '#1a7a44' },
     { key: 'branding',  label: 'Branding', icon: 'ti-palette', color: '#6B21A8' },
   ];
@@ -840,6 +898,88 @@ function renderMetas() {
       <div class="meta-bar-track"><div class="meta-bar-fill" style="width:${pctInv}%;background:#854F0B"></div></div></div>
     </div>`;
   }).join('');
+}
+
+// ═══ CLIENTES ═══════════════════════════════════════════════
+async function addCliente() {
+  const nome = s('cli-nome');
+  if (!nome) { alert('Informe o nome do cliente.'); return; }
+  const row = { nome, telefone: s('cli-telefone') || null, email: s('cli-email') || null, cidade: s('cli-cidade') || null, observacoes: s('cli-obs') || null };
+  if (editandoClienteId) {
+    await checarErro(await sb.from('clientes').update(row).eq('id', editandoClienteId), 'Erro ao salvar cliente');
+    editandoClienteId = null;
+  } else {
+    await checarErro(await sb.from('clientes').insert(row), 'Erro ao cadastrar cliente');
+  }
+  ['cli-nome','cli-telefone','cli-email','cli-cidade','cli-obs'].forEach(id => document.getElementById(id).value = '');
+  await carregarTudo();
+}
+
+let editandoClienteId = null;
+function editarCliente(id) {
+  const c = cache.clientes.find(c => c.id === id);
+  if (!c) return;
+  document.getElementById('cli-nome').value = c.nome || '';
+  document.getElementById('cli-telefone').value = c.telefone || '';
+  document.getElementById('cli-email').value = c.email || '';
+  document.getElementById('cli-cidade').value = c.cidade || '';
+  document.getElementById('cli-obs').value = c.observacoes || '';
+  editandoClienteId = id;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deletarCliente(id) {
+  if (!confirm('Remover este cliente? (as vendas ligadas a ele continuam, só perdem o vínculo)')) return;
+  await checarErro(await sb.from('clientes').delete().eq('id', id), 'Erro ao remover cliente');
+  await carregarTudo();
+}
+
+function populateListaClientes() {
+  document.getElementById('lista-clientes').innerHTML = cache.clientes.map(c => `<option value="${c.nome}">`).join('');
+}
+
+function renderClientes() {
+  const busca = (document.getElementById('busca-clientes')?.value || '').toLowerCase().trim();
+  const comprasPorCliente = {};
+  cache.vendas.forEach(v => {
+    if (!v.cliente_id) return;
+    const agg = comprasPorCliente[v.cliente_id] ||= { qtd: 0, total: 0 };
+    agg.qtd++; agg.total += Number(v.receita);
+  });
+  let list = cache.clientes;
+  if (busca) list = list.filter(c => c.nome.toLowerCase().includes(busca) || (c.telefone||'').includes(busca));
+  const tb = document.getElementById('tbody-clientes');
+  tb.innerHTML = list.length ? list.map(c => {
+    const agg = comprasPorCliente[c.id] || { qtd: 0, total: 0 };
+    return `<tr>
+      <td><strong>${c.nome}</strong>${c.observacoes ? '<br><small style="color:#aaa">'+c.observacoes+'</small>' : ''}</td>
+      <td>${c.telefone || '—'}</td>
+      <td>${c.email || '—'}</td>
+      <td>${c.cidade || '—'}</td>
+      <td>${agg.qtd}</td>
+      <td style="color:#1a7a44;font-weight:700">${fmtVal(agg.total)}</td>
+      <td><button class="btn sm" onclick="editarCliente('${c.id}')"><i class="ti ti-pencil" style="font-size:13px"></i></button></td>
+      <td><button class="btn danger sm" onclick="deletarCliente('${c.id}')"><i class="ti ti-trash" style="font-size:13px"></i></button></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" class="empty">Nenhum cliente cadastrado ainda.</td></tr>';
+}
+
+function exportarClientesCSV() {
+  const comprasPorCliente = {};
+  cache.vendas.forEach(v => {
+    if (!v.cliente_id) return;
+    const agg = comprasPorCliente[v.cliente_id] ||= { qtd: 0, total: 0 };
+    agg.qtd++; agg.total += Number(v.receita);
+  });
+  const rows = [['Nome', 'Telefone', 'E-mail', 'Cidade', 'Qtd. compras', 'Total gasto', 'Observações']];
+  cache.clientes.forEach(c => {
+    const agg = comprasPorCliente[c.id] || { qtd: 0, total: 0 };
+    rows.push([c.nome, c.telefone || '', c.email || '', c.cidade || '', agg.qtd, agg.total.toFixed(2), c.observacoes || '']);
+  });
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'areia_croa_clientes.csv'; a.click();
 }
 
 // ─── INIT ─────────────────────────────────────────────────────
