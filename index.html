@@ -10,17 +10,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
-  --bg:#0A0908; --surface:#161311; --surface-alt:#1F1B17;
-  --border:#332C22; --border-soft:#241F1A;
-  --text:#F3EDE2; --text-muted:#9C917E; --text-faint:#5E5647;
+  --bg:#000000; --surface:#141414; --surface-alt:#1E1E1E;
+  --border:#333333; --border-soft:#242424;
+  --text:#F5F5F0; --text-muted:#9C9C94; --text-faint:#5A5A52;
   --accent:#D4AF37; --accent-dark:#B8942A; --accent-soft:#2B2418;
-  --success:#4CAF6D; --success-soft:#182A1F;
-  --danger:#E0685A; --danger-soft:#2E1C19;
+  --success:#22C55E; --success-soft:#132A1B;
+  --danger:#F13B3B; --danger-soft:#301415;
   --amber:#D4AF37; --amber-soft:#2B2418;
   --purple:#B79CE8; --purple-soft:#241F30;
   --r-sm:10px; --r-md:16px; --r-lg:22px; --r-pill:999px;
-  --shadow-card:0 1px 2px rgba(0,0,0,.5), 0 6px 20px rgba(0,0,0,.4);
-  --shadow-pop:0 10px 40px rgba(0,0,0,.6), 0 0 40px rgba(212,175,55,.06);
+  --shadow-card:0 1px 2px rgba(0,0,0,.6), 0 6px 20px rgba(0,0,0,.5);
+  --shadow-pop:0 10px 40px rgba(0,0,0,.7), 0 0 40px rgba(212,175,55,.08);
   --font-display:'Manrope',system-ui,sans-serif;
   --font-body:'Inter',system-ui,sans-serif;
 }
@@ -206,6 +206,17 @@ tbody tr:hover{background:var(--surface-alt)}
 .meta-home-fill{height:100%;background:linear-gradient(90deg,var(--accent-dark),var(--accent));border-radius:var(--r-pill);transition:width .4s}
 .meta-home-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;font-size:12.5px;color:var(--text-muted)}
 .meta-home-pct{font-family:var(--font-display);font-weight:800;color:var(--accent)}
+.app-footer-verse{text-align:center;padding:2.5rem 1rem 1rem;margin-top:1rem;border-top:1px solid var(--border-soft)}
+.app-footer-verse span{display:block;font-family:var(--font-display);font-style:italic;font-size:13px;color:var(--text-muted);max-width:520px;margin:0 auto 8px;line-height:1.6}
+.app-footer-verse small{font-size:11px;color:var(--accent);letter-spacing:.04em;text-transform:uppercase;font-weight:700}
+/* ═══ GRÁFICO DE CRESCIMENTO (linha) ═══ */
+.growth-card{background:linear-gradient(160deg,#1A1A1A 0%,#0D0D0D 70%);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem 1.25rem 1rem;box-shadow:var(--shadow-card)}
+.growth-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.growth-total{font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--text)}
+.growth-delta{font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:var(--r-pill)}
+.growth-delta.up{color:var(--success);background:var(--success-soft)}
+.growth-delta.down{color:var(--danger);background:var(--danger-soft)}
+.growth-labels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-faint);margin-top:4px;padding:0 2px}
 .cliente-stat-label{font-size:10.5px;color:var(--text-muted);font-weight:600}
 .cliente-stat-value{font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--text)}
 .cliente-actions{display:flex;gap:6px;margin-top:2px}
@@ -267,8 +278,8 @@ tbody tr:hover{background:var(--surface-alt)}
     <div class="divider"></div>
     <div class="donuts-row" id="donuts-resumo"></div>
     <div class="divider"></div>
-    <p class="section-title">Estoque de embalagens</p>
-    <div id="dash-estoque"></div>
+    <p class="section-title">Evolução do faturamento</p>
+    <div id="marcos-home"></div>
     <div class="divider"></div>
     <p class="section-title">Últimas vendas</p>
     <div class="lista-vendas" id="lista-dash-vendas"></div>
@@ -305,43 +316,13 @@ tbody tr:hover{background:var(--surface-alt)}
 
   <!-- VENDAS -->
   <div id="panel-vendas" class="panel">
-    <p class="section-title">Registrar venda</p>
-    <div class="form-grid col4">
-      <div><label>Data</label><input type="date" id="v-data"></div>
-      <div><label>Produto</label><select id="v-produto" onchange="atualizarCustoProduto();atualizarPreview()"><option value="">— Selecione —</option></select></div>
-      <div><label>Valor de venda (R$)</label><input type="number" id="v-valor" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
-      <div><label>Canal</label><select id="v-canal"><option>Shopify</option><option>Instagram</option><option>Presencial</option><option>Mercado Livre</option><option>WhatsApp</option><option>Outro</option></select></div>
-    </div>
-    <div class="form-grid col4">
-      <div><label>Cliente (nome)</label><input type="text" id="v-cliente-nome" placeholder="Nome do cliente" list="lista-clientes"></div>
-      <div><label>Telefone do cliente</label><input type="text" id="v-cliente-tel" placeholder="(75) 99999-9999"></div>
-    </div>
-    <datalist id="lista-clientes"></datalist>
-    <div class="form-grid col4">
-      <div>
-        <label>Custo do produto (R$) <span id="v-custo-badge" style="font-size:10px;color:#aaa;font-weight:400"></span></label>
-        <input type="number" id="v-custo-prod" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()" style="border-color:#947642">
-      </div>
-      <div><label>Frete pago pela loja (R$)</label><input type="number" id="v-frete" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
-      <div><label>Taxa gateway (R$)</label><input type="number" id="v-taxa" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
-      <div><label>Custo anúncios (R$)</label><input type="number" id="v-anuncio" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
-    </div>
-    <div class="form-grid col4" style="margin-top:-4px">
-      <div style="grid-column:1/-1"><label>Pedido / observação</label><input type="text" id="v-obs" placeholder="Ex: pedido #1042"></div>
-    </div>
-    <div>
-      <label>Embalagens utilizadas</label>
-      <div class="emb-checks" id="emb-checks"></div>
-    </div>
-    <div class="custo-preview" id="custo-preview" style="margin-top:12px"></div>
-    <button class="btn primary" onclick="addVenda()"><i class="ti ti-plus"></i>Registrar venda</button>
-    <div class="divider"></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <p class="section-title" style="margin:0">Vendas registradas</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <input type="text" id="busca-vendas" placeholder="Buscar produto..." oninput="renderVendas()" style="height:32px;font-size:12px;width:160px">
-        <select id="filter-mes-vendas" onchange="renderVendas()" style="height:32px;font-size:12px;width:160px"></select>
-      </div>
+      <button class="btn primary" onclick="abrirModalNovaVenda()"><i class="ti ti-plus"></i>Nova venda</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <input type="text" id="busca-vendas" placeholder="Buscar produto..." oninput="renderVendas()" style="height:36px;font-size:13px;flex:1;min-width:140px">
+      <select id="filter-mes-vendas" onchange="renderVendas()" style="height:36px;font-size:13px;width:160px"></select>
     </div>
     <div class="lista-vendas" id="lista-vendas"></div>
   </div>
@@ -409,6 +390,9 @@ tbody tr:hover{background:var(--surface-alt)}
 
   <!-- MÉTRICAS DIÁRIAS -->
   <div id="panel-metricas" class="panel">
+    <p class="section-title">Evolução do faturamento (últimos 12 meses)</p>
+    <div class="growth-card" id="grafico-crescimento"></div>
+    <div class="divider"></div>
     <p class="section-title">Lançar métricas do dia</p>
     <div class="form-grid col4">
       <div><label>Data</label><input type="date" id="m-data"></div>
@@ -490,6 +474,11 @@ tbody tr:hover{background:var(--surface-alt)}
       </div>
     </div>
     <div class="cliente-grid" id="grid-clientes"></div>
+  </div>
+
+  <div class="app-footer-verse">
+    <span>“O Senhor lhe garantirá bênção em tudo que fizerem e encherá seus celeiros de cereais.”</span>
+    <small>Deuteronômio 28:8</small>
   </div>
 </div>
 
@@ -663,11 +652,6 @@ function renderDashboard() {
 
   renderDonuts(vendas, gastoAds);
 
-  document.getElementById('dash-estoque').innerHTML = cache.embalagens.length ? `
-    <div class="table-wrap"><table><thead><tr><th>Item</th><th>Estoque</th></tr></thead><tbody>
-    ${cache.embalagens.map(e => `<tr><td>${e.nome}</td><td class="${e.estoque < 10 ? 'estoque-baixo' : ''}">${e.estoque}${e.estoque < 10 ? ' <span class="tag-warn">Baixo</span>' : ''}</td></tr>`).join('')}
-    </tbody></table></div>` : '<p class="empty">Nenhuma embalagem cadastrada.</p>';
-
   const ultimas = [...cache.vendas].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 8);
   document.getElementById('lista-dash-vendas').innerHTML = ultimas.length ? ultimas.map(v => `
     <div class="venda-card" onclick="abrirModalVenda('${v.id}')">
@@ -738,21 +722,22 @@ function renderMarcos() {
   const faltam = Math.max(0, proximoTier - totalAcumulado);
   const jaAtingiuTudo = totalAcumulado >= MARCOS_TIERS[MARCOS_TIERS.length - 1];
 
-  document.getElementById('marcos-resumo').innerHTML = `
+  const heroHtml = `
     <div class="marco-hero">
       <div class="marco-hero-label">Faturamento acumulado (todo o período)</div>
       <div class="marco-hero-valor">${fmtVal(totalAcumulado)}</div>
       <div class="marco-hero-sub">${jaAtingiuTudo ? 'Todos os marcos foram atingidos! 🎉' : `Próximo marco: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div>
     </div>`;
+  document.getElementById('marcos-resumo').innerHTML = heroHtml;
 
   let anterior = 0;
-  document.getElementById('marcos-lista').innerHTML = MARCOS_TIERS.map(tier => {
+  const listaHtml = MARCOS_TIERS.map(tier => {
     const atingido = totalAcumulado >= tier;
     const isAtual = !atingido && totalAcumulado >= anterior;
     const progresso = atingido ? 100 : Math.max(0, Math.min(100, ((totalAcumulado - anterior) / (tier - anterior)) * 100));
     const linha = `
     <div class="marco-item ${atingido ? 'atingido' : ''} ${isAtual ? 'atual' : ''}">
-      <div class="marco-icone" style="background:${atingido ? 'var(--accent)' : 'var(--surface-alt)'};color:${atingido ? '#0A0908' : 'var(--text-muted)'}">
+      <div class="marco-icone" style="background:${atingido ? 'var(--accent)' : 'var(--surface-alt)'};color:${atingido ? '#000' : 'var(--text-muted)'}">
         ${atingido ? '<i class="ti ti-check"></i>' : '<i class="ti ti-flag"></i>'}
       </div>
       <div class="marco-corpo">
@@ -764,6 +749,10 @@ function renderMarcos() {
     anterior = tier;
     return linha;
   }).join('');
+  document.getElementById('marcos-lista').innerHTML = listaHtml;
+
+  const home = document.getElementById('marcos-home');
+  if (home) home.innerHTML = heroHtml + '<div class="marco-track" style="margin-top:12px">' + listaHtml + '</div>';
 }
 
 // ═══ EMBALAGENS ═══════════════════════════════════════════════
@@ -989,7 +978,16 @@ async function addVenda() {
   ['v-valor','v-frete','v-taxa','v-anuncio','v-obs','v-custo-prod','v-cliente-nome','v-cliente-tel'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('v-produto').value = '';
   document.getElementById('v-custo-badge').textContent = '';
+  fecharModalNovaVenda();
   await carregarTudo();
+}
+
+function abrirModalNovaVenda() {
+  document.getElementById('v-data').value = hoje();
+  document.getElementById('modal-nova-venda').classList.remove('hidden');
+}
+function fecharModalNovaVenda() {
+  document.getElementById('modal-nova-venda').classList.add('hidden');
 }
 
 // cria o cliente se não existir (casando por telefone), ou retorna o id existente. Sem nome nem telefone, não vincula.
@@ -1164,7 +1162,55 @@ async function deletarMetrica(id) {
   await carregarTudo();
 }
 
+function renderGraficoCrescimento() {
+  const nomesMesAbrev = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const hoje = new Date();
+  const meses = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+    meses.push({ ym: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`, label: nomesMesAbrev[d.getMonth()] });
+  }
+  const valores = meses.map(m => cache.vendas.filter(v => getMes(v.data) === m.ym).reduce((s, v) => s + Number(v.receita), 0));
+  const total = valores.reduce((s, v) => s + v, 0);
+  const ultimo = valores[valores.length - 1], penultimo = valores[valores.length - 2] || 0;
+  const delta = penultimo > 0 ? ((ultimo - penultimo) / penultimo) * 100 : (ultimo > 0 ? 100 : 0);
+
+  const w = 600, h = 160, pad = 10;
+  const max = Math.max(...valores, 1);
+  const stepX = (w - pad * 2) / (valores.length - 1);
+  const pontos = valores.map((v, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - (v / max) * (h - pad * 2);
+    return [x, y];
+  });
+  const linha = pontos.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = linha + ` L${pontos[pontos.length - 1][0].toFixed(1)},${h - pad} L${pontos[0][0].toFixed(1)},${h - pad} Z`;
+
+  document.getElementById('grafico-crescimento').innerHTML = `
+    <div class="growth-header">
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em">Últimos 12 meses</div>
+        <div class="growth-total">${fmtVal(total)}</div>
+      </div>
+      <span class="growth-delta ${delta >= 0 ? 'up' : 'down'}"><i class="ti ti-trending-${delta >= 0 ? 'up' : 'down'}"></i> ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%</span>
+    </div>
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#D4AF37" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#D4AF37" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+      <path d="${area}" fill="url(#growthGrad)" stroke="none"/>
+      <path d="${linha}" fill="none" stroke="#D4AF37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pontos.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="#D4AF37"/>`).join('')}
+    </svg>
+    <div class="growth-labels">${meses.map(m => `<span>${m.label}</span>`).join('')}</div>
+  `;
+}
+
 function renderMetricas() {
+  renderGraficoCrescimento();
   const tb = document.getElementById('tbody-metricas');
   tb.innerHTML = cache.metricas.length ? cache.metricas.map(m => `
     <tr><td>${fmtData(m.data)}</td><td>${m.sessoes}</td><td>${m.vendas_qtd}</td><td>${fmtPct(m.taxa_conversao)}</td>
@@ -1371,6 +1417,41 @@ checarSessao();
     <button class="drawer-item" data-tab="marcos" onclick="trocarAba('marcos');fecharDrawer()"><i class="ti ti-flag"></i>Marcos</button>
     <button class="drawer-item" data-tab="clientes" onclick="trocarAba('clientes');fecharDrawer()"><i class="ti ti-address-book"></i>Clientes</button>
   </nav>
+</div>
+<div class="modal-overlay hidden" id="modal-nova-venda" onclick="if(event.target===this)fecharModalNovaVenda()">
+  <div class="modal-box" style="max-width:560px">
+    <button class="modal-close" onclick="fecharModalNovaVenda()">&times;</button>
+    <div class="modal-header"><div style="font-family:var(--font-display);font-weight:800;font-size:17px">Nova venda</div></div>
+    <div class="form-grid col4">
+      <div><label>Data</label><input type="date" id="v-data"></div>
+      <div><label>Produto</label><select id="v-produto" onchange="atualizarCustoProduto();atualizarPreview()"><option value="">— Selecione —</option></select></div>
+      <div><label>Valor de venda (R$)</label><input type="number" id="v-valor" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
+      <div><label>Canal</label><select id="v-canal"><option>Shopify</option><option>Instagram</option><option>Presencial</option><option>Mercado Livre</option><option>WhatsApp</option><option>Outro</option></select></div>
+    </div>
+    <div class="form-grid col4">
+      <div><label>Cliente (nome)</label><input type="text" id="v-cliente-nome" placeholder="Nome do cliente" list="lista-clientes"></div>
+      <div><label>Telefone do cliente</label><input type="text" id="v-cliente-tel" placeholder="(75) 99999-9999"></div>
+    </div>
+    <datalist id="lista-clientes"></datalist>
+    <div class="form-grid col4">
+      <div>
+        <label>Custo do produto (R$) <span id="v-custo-badge" style="font-size:10px;color:#aaa;font-weight:400"></span></label>
+        <input type="number" id="v-custo-prod" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()" style="border-color:#947642">
+      </div>
+      <div><label>Frete pago pela loja (R$)</label><input type="number" id="v-frete" placeholder="17,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
+      <div><label>Taxa gateway (R$)</label><input type="number" id="v-taxa" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
+      <div><label>Custo anúncios (R$)</label><input type="number" id="v-anuncio" placeholder="0,00" step="0.01" min="0" oninput="atualizarPreview()"></div>
+    </div>
+    <div class="form-grid col4" style="margin-top:-4px">
+      <div style="grid-column:1/-1"><label>Pedido / observação</label><input type="text" id="v-obs" placeholder="Ex: pedido #1042"></div>
+    </div>
+    <div>
+      <label>Embalagens utilizadas</label>
+      <div class="emb-checks" id="emb-checks"></div>
+    </div>
+    <div class="custo-preview" id="custo-preview" style="margin-top:12px"></div>
+    <button class="btn primary" style="width:100%;justify-content:center;margin-top:14px" onclick="addVenda()"><i class="ti ti-plus"></i>Registrar venda</button>
+  </div>
 </div>
 <div class="modal-overlay hidden" id="modal-venda" onclick="if(event.target===this)fecharModalVenda()">
   <div class="modal-box" id="modal-venda-conteudo"></div>
