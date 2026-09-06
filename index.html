@@ -3253,5 +3253,131 @@ function abrirModalPedidoV9(id){
   document.getElementById('modal-venda').classList.remove('hidden');document.body.classList.add('modal-open');
 }
 </script>
+
+<script id="v9-7-supabase-primary">
+// ═══════════════════════════════════════════════════════════════
+// V9.7 · SUPABASE É A FONTE PRINCIPAL
+// O localStorage serve apenas para pintar a tela rapidamente.
+// Toda abertura/sincronização válida é confirmada no Supabase.
+// ═══════════════════════════════════════════════════════════════
+
+// Restaura um snapshot apenas para resposta visual imediata.
+// Importante: nada restaurado do localStorage é marcado como "carregado da fonte".
+// Assim, as consultas seguintes SEMPRE passam pelo Supabase.
+perfLoadV95=function(){
+  try{
+    const raw=localStorage.getItem(PERF_V95_KEY);if(!raw)return false;
+    const x=JSON.parse(raw);
+    if(!x||!x.savedAt||Date.now()-x.savedAt>PERF_V95_TTL){localStorage.removeItem(PERF_V95_KEY);return false}
+    if(Array.isArray(x.pedidos))cache.pedidos=x.pedidos;
+    if(Array.isArray(x.anuncios))cache.anuncios=x.anuncios;
+    if(Array.isArray(x.metas))cache.metas=x.metas;
+    if(Array.isArray(x.estadoView))cache.estadoView=x.estadoView;
+    if(Array.isArray(x.produtos))cache.produtos=x.produtos;
+    if(Array.isArray(x.vendas))cache.vendas=x.vendas;
+    if(Array.isArray(x.clientes))cache.clientes=x.clientes;
+    if(Array.isArray(x.embalagens))cache.embalagens=x.embalagens;
+    if(Array.isArray(x.carrinhos))cache.carrinhosAbandonados=x.carrinhos;
+
+    // Cache ≠ fonte. Os flags ficam vazios para obrigar a primeira leitura do Supabase.
+    perfV95.loaded.clear();
+    perfV95.loading.clear();
+    perfV95.cacheHit=true;perfV95.lastSync=x.savedAt;
+    pedidosSchemaV8=Array.isArray(x.pedidos);
+    adsSchemaV2=Array.isArray(x.anuncios);
+    cartsSchemaV7=Array.isArray(x.carrinhos);
+    return Array.isArray(x.pedidos);
+  }catch(e){console.warn('[V9.7] cache local indisponível',e);return false}
+};
+
+function renderCacheAbaV97(id){
+  try{
+    if(id==='dashboard'&&Array.isArray(cache.pedidos)&&cache.pedidos.length){popularSelectMes();renderDashboard();return}
+    if(id==='produtos'&&Array.isArray(cache.produtos)&&cache.produtos.length){renderProdutos();populateProdutoSelect();return}
+    if(id==='embalagens'&&Array.isArray(cache.embalagens)&&cache.embalagens.length){renderEmbalagens();renderEmbChecks();return}
+    if(id==='clientes'&&Array.isArray(cache.clientes)&&cache.clientes.length){renderClientes();populateListaClientes();return}
+    if(id==='vendas'&&Array.isArray(cache.pedidos)&&cache.pedidos.length){renderVendas();return}
+    if(id==='historico'&&Array.isArray(cache.pedidos)&&cache.pedidos.length){renderHistorico();return}
+    if(id==='anuncios'&&Array.isArray(cache.anuncios)){renderAnuncios();if(Array.isArray(cache.carrinhosAbandonados))renderCarrinhosAbandonados();return}
+    if(id==='metas'&&Array.isArray(cache.metas)){renderMetas();return}
+    if(id==='marcos'){renderMarcosV95();return}
+  }catch(e){console.warn('[V9.7] falha ao pintar cache da aba',id,e)}
+}
+
+// Abertura: cache pode aparecer em milissegundos, mas o Supabase sempre confirma
+// e substitui os dados antes de considerarmos a tela sincronizada.
+iniciarApp=async function(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app-root').classList.remove('hidden');
+  const vd=document.getElementById('v-data');if(vd)vd.value=hoje();
+
+  const hit=perfLoadV95();
+  if(hit){
+    renderCacheAbaV97('dashboard');
+    perfStatusV95('Cache local · sincronizando Supabase…');
+  }else{
+    perfStatusV95('Conectando ao Supabase…');
+  }
+
+  try{
+    await carregarResumoV95({silent:true});
+    perfStatusV95('Supabase sincronizado · fonte principal');
+  }catch(e){
+    console.error('[V9.7] falha na sincronização principal',e);
+    perfStatusV95(hit?'Sem conexão · exibindo cache temporário':'Erro ao sincronizar com Supabase');
+  }
+
+  // Pré-carrega dados de cadastro sempre do servidor. Não bloqueia o dashboard.
+  const idle=window.requestIdleCallback||((fn)=>setTimeout(fn,350));
+  idle(()=>Promise.allSettled([carregarProdutosV95(true),carregarClientesV95(true)]).then(()=>perfSaveV95()));
+};
+
+// Ao entrar numa aba, mostra o que houver em cache imediatamente e, em seguida,
+// força uma leitura nova no Supabase. Isso também captura alterações feitas em outro dispositivo.
+trocarAba=async function(id,btn){
+  trocarAbaOriginalV95(id,btn);
+  renderCacheAbaV97(id);
+  const panel=document.getElementById('panel-'+id);if(panel)panel.classList.add('perf-loading-v95');
+  try{
+    perfStatusV95('Sincronizando com Supabase…');
+    await carregarAbaV95(id,true);
+    perfSaveV95();
+    perfStatusV95('Supabase sincronizado · fonte principal');
+  }catch(e){
+    console.error('[V9.7] erro ao atualizar aba',id,e);
+    perfStatusV95('Falha ao sincronizar esta área');
+  }finally{
+    if(panel)panel.classList.remove('perf-loading-v95');
+  }
+};
+
+// Botões que chamam carregarTudo() passam sempre pela fonte principal.
+carregarTudo=async function(){
+  const tab=perfActiveTabV95();
+  perfStatusV95('Sincronizando alterações no Supabase…');
+  await carregarResumoV95({silent:true});
+  if(tab!=='dashboard')await carregarAbaV95(tab,true);
+  perfSaveV95();
+  perfStatusV95('Supabase sincronizado · fonte principal');
+};
+
+// Se outra aba/dispositivo alterou os dados, voltar para esta janela atualiza o resumo.
+let v97LastFocusSync=0;
+async function sincronizarTelaAtivaV97(origem='retorno'){
+  const root=document.getElementById('app-root');if(!root||root.classList.contains('hidden'))return;
+  try{
+    const tab=perfActiveTabV95();
+    await carregarResumoV95({silent:true});
+    if(tab!=='dashboard')await carregarAbaV95(tab,true);
+    perfSaveV95();perfStatusV95('Supabase sincronizado · fonte principal');
+  }catch(e){console.warn('[V9.7] sync '+origem,e)}
+}
+window.addEventListener('focus',()=>{
+  const agora=Date.now();if(agora-v97LastFocusSync<15000)return;v97LastFocusSync=agora;
+  sincronizarTelaAtivaV97('ao focar');
+});
+window.addEventListener('online',()=>sincronizarTelaAtivaV97('online'));
+</script>
+
 </body>
 </html>
