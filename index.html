@@ -263,6 +263,7 @@ tbody tr:hover{background:var(--surface-alt)}
     <button class="tab" data-tab="anuncios" onclick="trocarAba('anuncios',this)"><i class="ti ti-speakerphone"></i>Anúncios</button>
     <button class="tab" data-tab="metricas" onclick="trocarAba('metricas',this)"><i class="ti ti-chart-line"></i>Métricas</button>
     <button class="tab" data-tab="metas" onclick="trocarAba('metas',this)"><i class="ti ti-target-arrow"></i>Metas</button>
+    <button class="tab" data-tab="recarga" onclick="trocarAba('recarga',this)"><i class="ti ti-battery-charging"></i>Recarga Meta</button>
     <button class="tab" data-tab="marcos" onclick="trocarAba('marcos',this)"><i class="ti ti-flag"></i>Marcos</button>
     <button class="tab" data-tab="clientes" onclick="trocarAba('clientes',this)"><i class="ti ti-address-book"></i>Clientes</button>
   </div>
@@ -433,6 +434,20 @@ tbody tr:hover{background:var(--surface-alt)}
     <div id="metas-lista"></div>
   </div>
 
+  <!-- RECARGA META -->
+  <div id="panel-recarga" class="panel">
+    <p class="section-title">Iniciar nova recarga de verba</p>
+    <div class="form-grid col3">
+      <div><label>Data de início</label><input type="date" id="rec-data-inicio"></div>
+      <div><label>Valor da recarga (R$)</label><input type="number" id="rec-valor" placeholder="0,00" step="0.01" min="0"></div>
+      <div><label>&nbsp;</label><button class="btn primary" style="width:100%" onclick="iniciarRecarga()"><i class="ti ti-plus"></i>Iniciar recarga</button></div>
+    </div>
+    <p style="font-size:11.5px;color:var(--text-muted);margin:-6px 0 1rem">Quando a verba acabar, clica na recarga ativa e informa sessões + vendas do período. O sistema calcula o ROAS sozinho, com base no faturamento real das vendas registradas nessas datas.</p>
+    <div class="divider"></div>
+    <p class="section-title">Histórico de recargas</p>
+    <div class="lista-vendas" id="lista-recargas"></div>
+  </div>
+
   <!-- MARCOS -->
   <div id="panel-marcos" class="panel">
     <p class="section-title">Evolução do faturamento acumulado</p>
@@ -487,7 +502,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_sx6-6HJenQSKk2aGEtjzNw_-ULohVIm';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // cache local dos dados (recarregado do Supabase após cada mutação relevante)
-let cache = { embalagens: [], produtos: [], vendas: [], anuncios: { carrinhos: [], diretas: [], branding: [] }, metricas: [], metas: [], clientes: [] };
+let cache = { embalagens: [], produtos: [], vendas: [], anuncios: { carrinhos: [], diretas: [], branding: [] }, metricas: [], metas: [], clientes: [], recargas: [] };
 
 // ─── HELPERS ──────────────────────────────────────────────────
 function s(id) { return document.getElementById(id).value.trim(); }
@@ -539,7 +554,7 @@ async function iniciarApp() {
 // ─── CARREGAR DADOS ─────────────────────────────────────────────
 async function carregarTudo() {
   document.getElementById('status-conexao').textContent = 'Sincronizando...';
-  const [emb, prod, vend, vendEmb, anun, metr, met, cli] = await Promise.all([
+  const [emb, prod, vend, vendEmb, anun, metr, met, cli, rec] = await Promise.all([
     sb.from('embalagens').select('*').order('nome'),
     sb.from('produtos').select('*').order('nome'),
     sb.from('vendas').select('*').order('data', { ascending: false }),
@@ -548,6 +563,7 @@ async function carregarTudo() {
     sb.from('metricas_diarias').select('*').order('data', { ascending: false }),
     sb.from('metas_mensais').select('*').order('ano', { ascending: false }).order('mes', { ascending: false }),
     sb.from('clientes').select('*').order('nome'),
+    sb.from('recargas_meta').select('*').order('data_inicio', { ascending: false }),
   ]);
   cache.embalagens = emb.data || [];
   cache.produtos = prod.data || [];
@@ -559,6 +575,7 @@ async function carregarTudo() {
   cache.metricas = metr.data || [];
   cache.metas = met.data || [];
   cache.clientes = cli.data || [];
+  cache.recargas = rec.data || [];
   document.getElementById('status-conexao').textContent = 'Dados sincronizados com Supabase';
   renderAll();
 }
@@ -575,6 +592,7 @@ function renderAll() {
   renderAnuncios();
   renderMetricas();
   renderMetas();
+  renderRecargas();
   renderMarcos();
   renderMetaHome();
   renderClientes();
@@ -618,6 +636,14 @@ function popularSelectMes() {
   }
 }
 
+// gasto real em anúncios (Anúncios + Recarga Meta) num mês, ou geral se fm vazio
+function gastoAdsTotal(fm) {
+  const dosAnuncios = ['carrinhos', 'diretas', 'branding'].reduce((s, t) =>
+    s + cache.anuncios[t].filter(a => !fm || getMes(a.data) === fm).reduce((ss, a) => ss + Number(a.valor), 0), 0);
+  const dasRecargas = cache.recargas.filter(r => !fm || getMes(r.data_inicio) === fm).reduce((s, r) => s + Number(r.valor_recarga), 0);
+  return dosAnuncios + dasRecargas;
+}
+
 // ═══ DASHBOARD ═══════════════════════════════════════════════
 function renderDashboard() {
   const fm = document.getElementById('filter-mes').value;
@@ -625,8 +651,7 @@ function renderDashboard() {
   const receita = vendas.reduce((s, v) => s + Number(v.receita), 0);
   const custo = vendas.reduce((s, v) => s + Number(v.custo_total), 0);
   const lucro = receita - custo;
-  const gastoAds = ['carrinhos', 'diretas', 'branding'].reduce((s, t) =>
-    s + cache.anuncios[t].filter(a => !fm || getMes(a.data) === fm).reduce((ss, a) => ss + Number(a.valor), 0), 0);
+  const gastoAds = gastoAdsTotal(fm);
 
   const margem = receita > 0 ? (lucro / receita) * 100 : 0;
   const pct = (v) => Math.max(0, Math.min(100, v));
@@ -710,6 +735,75 @@ function renderDonuts(vendas, gastoAds) {
 }
 
 // ═══ MARCOS DE FATURAMENTO ═══════════════════════════════════
+// ═══ RECARGA META ═══════════════════════════════════════════
+async function iniciarRecarga() {
+  const data_inicio = document.getElementById('rec-data-inicio').value || hoje();
+  const valor_recarga = n('rec-valor');
+  if (valor_recarga <= 0) { alert('Informe o valor da recarga.'); return; }
+  await checarErro(await sb.from('recargas_meta').insert({ data_inicio, valor_recarga }), 'Erro ao iniciar recarga');
+  document.getElementById('rec-valor').value = '';
+  await carregarTudo();
+}
+
+async function deletarRecarga(id) {
+  if (!confirm('Remover esta recarga?')) return;
+  await checarErro(await sb.from('recargas_meta').delete().eq('id', id), 'Erro ao remover recarga');
+  await carregarTudo();
+}
+
+function calcRecarga(r) {
+  const fim = r.data_fim || hoje();
+  const faturamentoPeriodo = cache.vendas.filter(v => v.data >= r.data_inicio && v.data <= fim).reduce((s, v) => s + Number(v.receita), 0);
+  const roas = r.valor_recarga > 0 ? faturamentoPeriodo / r.valor_recarga : 0;
+  const taxaConv = r.sessoes > 0 ? (r.vendas_qtd / r.sessoes) * 100 : null;
+  return { faturamentoPeriodo, roas, taxaConv };
+}
+
+function renderRecargas() {
+  const list = cache.recargas;
+  document.getElementById('lista-recargas').innerHTML = list.length ? list.map(r => {
+    const encerrada = !!r.data_fim;
+    const { faturamentoPeriodo, roas, taxaConv } = calcRecarga(r);
+    return `<div class="venda-card" onclick="${encerrada ? '' : `abrirModalEncerrarRecarga('${r.id}')`}" style="${encerrada ? 'cursor:default' : ''}">
+      <span class="venda-codigo" style="background:${encerrada ? 'var(--success-soft)' : 'var(--accent-soft)'};color:${encerrada ? 'var(--success)' : 'var(--accent)'}">${encerrada ? 'Encerrada' : 'Ativa'}</span>
+      <div class="venda-info">
+        <div class="venda-produto">${fmtData(r.data_inicio)} ${encerrada ? '→ ' + fmtData(r.data_fim) : '(em andamento)'}</div>
+        <div class="venda-meta">${encerrada ? `${r.sessoes || 0} sessões · ${r.vendas_qtd || 0} vendas · Fat. período ${fmtVal(faturamentoPeriodo)}` : 'Clique para encerrar e lançar sessões/vendas'}</div>
+      </div>
+      <div class="venda-valores">
+        <div class="venda-receita">${fmtVal(r.valor_recarga)}</div>
+        <div class="venda-lucro" style="color:${encerrada ? (roas >= 1 ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)'}">${encerrada ? `ROAS ${roas.toFixed(2)}x` : 'sem ROAS ainda'}</div>
+      </div>
+    </div>`;
+  }).join('') : '<p class="empty">Nenhuma recarga registrada ainda.</p>';
+}
+
+function abrirModalEncerrarRecarga(id) {
+  const r = cache.recargas.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('modal-item-conteudo').innerHTML = `
+    <button class="modal-close" onclick="fecharModalItem()">&times;</button>
+    <div class="modal-header"><div style="font-family:var(--font-display);font-weight:800;font-size:17px">Encerrar recarga de ${fmtVal(r.valor_recarga)}</div></div>
+    <div class="form-grid col2" style="margin-top:4px">
+      <div style="grid-column:1/-1"><label>Data de fim</label><input type="date" id="modal-rec-fim" value="${hoje()}"></div>
+      <div><label>Sessões no período</label><input type="number" id="modal-rec-sessoes" placeholder="0" min="0"></div>
+      <div><label>Vendas no período (qtd.)</label><input type="number" id="modal-rec-vendas" placeholder="0" min="0"></div>
+    </div>
+    <button class="btn primary" style="margin-top:16px;width:100%;justify-content:center" onclick="encerrarRecarga('${r.id}')"><i class="ti ti-check"></i>Calcular ROAS e encerrar</button>
+    <button class="btn danger sm" style="margin-top:10px;width:100%;justify-content:center" onclick="fecharModalItem();deletarRecarga('${r.id}')"><i class="ti ti-trash"></i>Excluir recarga</button>
+  `;
+  document.getElementById('modal-item').classList.remove('hidden');
+}
+
+async function encerrarRecarga(id) {
+  const data_fim = document.getElementById('modal-rec-fim').value || hoje();
+  const sessoes = parseInt(document.getElementById('modal-rec-sessoes').value) || 0;
+  const vendas_qtd = parseInt(document.getElementById('modal-rec-vendas').value) || 0;
+  await checarErro(await sb.from('recargas_meta').update({ data_fim, sessoes, vendas_qtd }).eq('id', id), 'Erro ao encerrar recarga');
+  fecharModalItem();
+  await carregarTudo();
+}
+
 const MARCOS_TIERS = [20000, 50000, 100000, 200000, 500000, 1000000];
 function renderMarcos() {
   const totalAcumulado = cache.vendas.reduce((s, v) => s + Number(v.receita), 0);
@@ -1242,16 +1336,16 @@ function renderMetas() {
   const nomesMes = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   wrap.innerHTML = cache.metas.map(meta => {
     const ym = `${meta.ano}-${String(meta.mes).padStart(2,'0')}`;
-    const realizadoFat = cache.metricas.filter(m => getMes(m.data) === ym).reduce((s, m) => s + Number(m.faturamento_real), 0);
-    const realizadoInv = cache.metricas.filter(m => getMes(m.data) === ym).reduce((s, m) => s + Number(m.investimento_total), 0);
+    const realizadoFat = cache.vendas.filter(v => getMes(v.data) === ym).reduce((s, v) => s + Number(v.receita), 0);
+    const realizadoInv = gastoAdsTotal(ym);
     const pctFat = meta.faturamento_previsto > 0 ? Math.min(100, (realizadoFat / meta.faturamento_previsto) * 100) : 0;
     const pctInv = meta.investimento_previsto > 0 ? Math.min(100, (realizadoInv / meta.investimento_previsto) * 100) : 0;
     return `<div class="card" style="margin-bottom:12px">
       <div class="card-label"><i class="ti ti-calendar"></i>${nomesMes[meta.mes]}/${meta.ano}</div>
-      <div class="meta-bar"><span style="font-size:12px;color:#666">Faturamento: ${fmtVal(realizadoFat)} / ${fmtVal(meta.faturamento_previsto)}</span>
+      <div class="meta-bar"><span style="font-size:12px;color:var(--text-muted)">Faturamento: ${fmtVal(realizadoFat)} / ${fmtVal(meta.faturamento_previsto)}</span>
       <div class="meta-bar-track"><div class="meta-bar-fill" style="width:${pctFat}%"></div></div></div>
-      <div class="meta-bar"><span style="font-size:12px;color:#666">Investimento: ${fmtVal(realizadoInv)} / ${fmtVal(meta.investimento_previsto)}</span>
-      <div class="meta-bar-track"><div class="meta-bar-fill" style="width:${pctInv}%;background:#854F0B"></div></div></div>
+      <div class="meta-bar"><span style="font-size:12px;color:var(--text-muted)">Investimento (Anúncios + Recargas): ${fmtVal(realizadoInv)} / ${fmtVal(meta.investimento_previsto)}</span>
+      <div class="meta-bar-track"><div class="meta-bar-fill" style="width:${pctInv}%;background:var(--amber)"></div></div></div>
     </div>`;
   }).join('');
 }
@@ -1408,6 +1502,7 @@ checarSessao();
     <button class="drawer-item" data-tab="anuncios" onclick="trocarAba('anuncios');fecharDrawer()"><i class="ti ti-speakerphone"></i>Anúncios</button>
     <button class="drawer-item" data-tab="metricas" onclick="trocarAba('metricas');fecharDrawer()"><i class="ti ti-chart-line"></i>Métricas</button>
     <button class="drawer-item" data-tab="metas" onclick="trocarAba('metas');fecharDrawer()"><i class="ti ti-target-arrow"></i>Metas</button>
+    <button class="drawer-item" data-tab="recarga" onclick="trocarAba('recarga');fecharDrawer()"><i class="ti ti-battery-charging"></i>Recarga Meta</button>
     <button class="drawer-item" data-tab="marcos" onclick="trocarAba('marcos');fecharDrawer()"><i class="ti ti-flag"></i>Marcos</button>
     <button class="drawer-item" data-tab="clientes" onclick="trocarAba('clientes');fecharDrawer()"><i class="ti ti-address-book"></i>Clientes</button>
   </nav>
