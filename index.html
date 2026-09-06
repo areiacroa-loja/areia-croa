@@ -29,13 +29,13 @@ html{overflow-x:hidden;width:100%}
 body{font-family:var(--font-body);background:var(--bg);min-height:100vh;color:var(--text);-webkit-font-smoothing:antialiased;overflow-x:hidden;width:100%}
 .app{max-width:1060px;margin:0 auto;padding:2rem 1.25rem 4rem;width:100%}
 .topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:2rem;gap:12px}
-.topbar-menu-btn{justify-self:start;display:none;width:40px;height:40px;border-radius:var(--r-sm);background:var(--surface-alt);border:1px solid var(--border-soft);color:var(--text);align-items:center;justify-content:center;font-size:20px;cursor:pointer}
+.topbar-menu-btn{justify-self:start;display:flex;width:40px;height:40px;border-radius:var(--r-sm);background:var(--surface-alt);border:1px solid var(--border-soft);color:var(--text);align-items:center;justify-content:center;font-size:20px;cursor:pointer}
 .topbar-actions{justify-self:end;display:flex;gap:8px;flex-wrap:wrap}
 .topbar-brand{display:flex;align-items:center;gap:16px;justify-self:center;flex-direction:column;cursor:pointer;text-align:center}
 .topbar-brand img{height:46px;width:auto;display:block}
 .topbar h1{font-family:var(--font-display);font-size:19px;font-weight:800;color:var(--text);letter-spacing:-.01em}
 .topbar small{font-size:12.5px;color:var(--text-muted);display:block;margin-top:2px}
-.tabs{display:flex;gap:2px;background:var(--surface-alt);border-radius:var(--r-pill);padding:5px;margin-bottom:1.75rem;overflow-x:auto}
+.tabs{display:none}
 .tab{flex:1;min-width:fit-content;padding:9px 16px;border:none;background:transparent;border-radius:var(--r-pill);font-family:var(--font-display);font-size:12.5px;font-weight:700;color:var(--text-muted);cursor:pointer;transition:color .2s,background .2s;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
 .tab.active{background:var(--surface);color:var(--accent-dark);box-shadow:var(--shadow-card)}
 .tab:not(.active):hover{color:var(--text)}
@@ -333,12 +333,7 @@ tbody tr:hover{background:var(--surface-alt)}
       <label>Filtrar por mês:</label>
       <select id="filter-mes-hist" onchange="renderHistorico()" style="width:160px;height:32px"></select>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Data</th><th>Produto</th><th>Canal</th><th>Receita</th><th>Produto</th><th>Embal.</th><th>Frete</th><th>Taxas</th><th>Anúncios</th><th>Lucro</th></tr></thead>
-        <tbody id="tbody-hist"></tbody>
-      </table>
-    </div>
+    <div class="lista-vendas" id="lista-hist"></div>
   </div>
 
   <!-- ANÚNCIOS -->
@@ -360,7 +355,7 @@ tbody tr:hover{background:var(--surface-alt)}
         <div><label>Valor gasto (R$)</label><input type="number" id="an-carr-valor" placeholder="0,00" step="0.01" min="0"></div>
         <div><label>&nbsp;</label><button class="btn primary" style="width:100%" onclick="addAnuncio('carrinhos')"><i class="ti ti-plus"></i>Adicionar</button></div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Data</th><th>Plataforma</th><th>Campanha</th><th>Valor</th><th style="width:40px"></th></tr></thead><tbody id="tbody-carr"></tbody></table></div>
+      <div class="lista-vendas" id="tbody-carr"></div>
     </div>
 
     <div id="subpanel-diretas" class="subpanel" style="display:none">
@@ -372,7 +367,7 @@ tbody tr:hover{background:var(--surface-alt)}
         <div><label>Valor gasto (R$)</label><input type="number" id="an-dir-valor" placeholder="0,00" step="0.01" min="0"></div>
         <div><label>&nbsp;</label><button class="btn primary" style="width:100%" onclick="addAnuncio('diretas')"><i class="ti ti-plus"></i>Adicionar</button></div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Data</th><th>Plataforma</th><th>Campanha</th><th>Valor</th><th style="width:40px"></th></tr></thead><tbody id="tbody-dir"></tbody></table></div>
+      <div class="lista-vendas" id="tbody-dir"></div>
     </div>
 
     <div id="subpanel-branding" class="subpanel" style="display:none">
@@ -384,7 +379,7 @@ tbody tr:hover{background:var(--surface-alt)}
         <div><label>Valor gasto (R$)</label><input type="number" id="an-brd-valor" placeholder="0,00" step="0.01" min="0"></div>
         <div><label>&nbsp;</label><button class="btn primary" style="width:100%" onclick="addAnuncio('branding')"><i class="ti ti-plus"></i>Adicionar</button></div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Data</th><th>Plataforma</th><th>Campanha</th><th>Valor</th><th style="width:40px"></th></tr></thead><tbody id="tbody-brd"></tbody></table></div>
+      <div class="lista-vendas" id="tbody-brd"></div>
     </div>
   </div>
 
@@ -1076,13 +1071,18 @@ function fecharModalVenda() {
 function renderHistorico() {
   const fm = document.getElementById('filter-mes-hist')?.value || '';
   const list = cache.vendas.filter(v => !fm || getMes(v.data) === fm);
-  document.getElementById('tbody-hist').innerHTML = list.length ? list.map(v => `
-    <tr>
-      <td>${fmtData(v.data)}</td><td>${v.produto_nome}</td><td>${v.canal}</td>
-      <td style="color:#1a7a44">${fmtVal(v.receita)}</td>
-      <td>${fmtVal(v.custo_prod)}</td><td>${fmtVal(v.custo_emb)}</td><td>${fmtVal(v.frete)}</td><td>${fmtVal(v.taxa)}</td><td>${fmtVal(v.anuncio)}</td>
-      <td style="font-weight:700;color:${v.lucro >= 0 ? '#1a7a44' : '#c0392b'}">${fmtVal(v.lucro)}</td>
-    </tr>`).join('') : '<tr><td colspan="10" class="empty">Nenhum registro.</td></tr>';
+  document.getElementById('lista-hist').innerHTML = list.length ? list.map(v => `
+    <div class="venda-card" onclick="abrirModalVenda('${v.id}')">
+      <span class="venda-codigo">${codVenda(v)}</span>
+      <div class="venda-info">
+        <div class="venda-produto">${v.produto_nome}</div>
+        <div class="venda-meta">${fmtData(v.data)} · ${v.canal}</div>
+      </div>
+      <div class="venda-valores">
+        <div class="venda-receita">${fmtVal(v.receita)}</div>
+        <div class="venda-lucro" style="color:${v.lucro >= 0 ? 'var(--success)' : 'var(--danger)'}">Lucro ${fmtVal(v.lucro)}</div>
+      </div>
+    </div>`).join('') : '<p class="empty">Nenhum registro.</p>';
 }
 
 function exportarCSV() {
@@ -1130,13 +1130,19 @@ function renderAnuncios() {
   }).join('') + `<div class="card"><div class="card-label"><i class="ti ti-speakerphone"></i>Total investido</div><div class="card-value amber">${fmtVal(totalGeral)}</div></div>`;
 
   cats.forEach(c => {
-    const tb = document.getElementById(AN_TBODY[c.key]);
     const list = cache.anuncios[c.key];
-    tb.innerHTML = list.length ? list.map(a => `
-      <tr><td>${fmtData(a.data)}</td><td><span class="badge venda">${a.plataforma}</span></td><td>${a.descricao || '—'}</td>
-      <td style="color:#c0392b;font-weight:700">${fmtVal(a.valor)}</td>
-      <td><button class="btn danger sm" onclick="deletarAnuncio('${a.id}')"><i class="ti ti-trash" style="font-size:13px"></i></button></td></tr>
-    `).join('') : '<tr><td colspan="5" class="empty">Nenhum lançamento ainda.</td></tr>';
+    document.getElementById(AN_TBODY[c.key]).innerHTML = list.length ? list.map(a => `
+      <div class="venda-card" style="cursor:default">
+        <span class="venda-codigo">${a.plataforma}</span>
+        <div class="venda-info">
+          <div class="venda-produto">${a.descricao || '—'}</div>
+          <div class="venda-meta">${fmtData(a.data)}</div>
+        </div>
+        <div class="venda-valores" style="display:flex;align-items:center;gap:10px">
+          <div class="venda-receita" style="color:var(--danger)">${fmtVal(a.valor)}</div>
+          <button class="btn danger sm" onclick="deletarAnuncio('${a.id}')"><i class="ti ti-trash" style="font-size:13px"></i></button>
+        </div>
+      </div>`).join('') : '<p class="empty">Nenhum lançamento ainda.</p>';
   });
 }
 
@@ -1341,22 +1347,14 @@ function linkWhatsapp(cliente) {
 function renderClientes() {
   const busca = (document.getElementById('busca-clientes')?.value || '').toLowerCase().trim();
   const filtroTag = document.getElementById('filter-tag-clientes')?.value || '';
-  const comprasPorCliente = {};
-  cache.vendas.forEach(v => {
-    if (!v.cliente_id) return;
-    const agg = comprasPorCliente[v.cliente_id] ||= { qtd: 0, total: 0 };
-    agg.qtd++; agg.total += Number(v.receita);
-  });
   let list = cache.clientes;
   if (busca) list = list.filter(c => c.nome.toLowerCase().includes(busca) || (c.telefone||'').includes(busca));
   if (filtroTag) list = list.filter(c => c.tag === filtroTag);
   const grid = document.getElementById('grid-clientes');
   if (!list.length) { grid.innerHTML = '<p class="empty" style="grid-column:1/-1">Nenhum cliente encontrado.</p>'; return; }
   grid.innerHTML = list.map(c => {
-    const agg = comprasPorCliente[c.id] || { qtd: 0, total: 0 };
     const wa = linkWhatsapp(c);
-    const tagHtml = c.tag === 'cliente' ? '<span class="badge tag-cliente">Cliente</span>'
-      : c.tag === 'carrinho_abandonado' ? '<span class="badge tag-carrinho">Carrinho abandonado</span>' : '';
+    const ehCliente = c.tag === 'cliente';
     return `<div class="cliente-card">
       <div class="cliente-top">
         <div class="cliente-avatar">${iniciais(c.nome)}</div>
@@ -1365,11 +1363,7 @@ function renderClientes() {
           <div class="cliente-sub">${c.telefone || 'sem telefone'}${c.cidade ? ' · ' + c.cidade : ''}</div>
         </div>
       </div>
-      ${tagHtml ? `<div class="cliente-tags">${tagHtml}</div>` : ''}
-      <div class="cliente-stats">
-        <div><div class="cliente-stat-label">Compras</div><div class="cliente-stat-value">${agg.qtd}</div></div>
-        <div><div class="cliente-stat-label">Total gasto</div><div class="cliente-stat-value" style="color:var(--success)">${fmtVal(agg.total)}</div></div>
-      </div>
+      <div class="cliente-tags"><span class="badge ${ehCliente ? 'tag-cliente' : 'tag-carrinho'}">${ehCliente ? 'Cliente' : 'Não é cliente'}</span></div>
       <div class="cliente-actions">
         ${wa ? `<a class="btn whatsapp sm" href="${wa}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i>WhatsApp</a>` : ''}
         <button class="btn sm" onclick="editarCliente('${c.id}')"><i class="ti ti-pencil" style="font-size:13px"></i></button>
