@@ -4809,5 +4809,298 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 </script>
 
+
+
+<style id="v10-4-conta-meta-style">
+/* V10.4 · conta Meta / saldo */
+.v104-account-hero{position:relative;overflow:hidden;border:1px solid #2b2d31;border-radius:22px;padding:22px;background:radial-gradient(420px 190px at 0% 0%,rgba(213,179,71,.13),transparent 72%),linear-gradient(145deg,#181a1d,#0f1012);box-shadow:0 20px 48px rgba(0,0,0,.25);margin-bottom:12px}
+.v104-account-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.v104-account-kicker{font:800 8.5px var(--font-display);letter-spacing:.12em;text-transform:uppercase;color:#9d8a45}.v104-account-name{font:800 21px/1.15 var(--font-display);margin-top:5px;letter-spacing:-.03em}.v104-account-sub{font-size:10px;color:#747771;margin-top:6px;line-height:1.45}.v104-account-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(72,209,122,.2);background:rgba(72,209,122,.06);color:#72d997;border-radius:999px;padding:6px 9px;font:800 8px var(--font-display);white-space:nowrap}.v104-account-pill.off{border-color:rgba(255,98,104,.2);background:rgba(255,98,104,.06);color:#ff7b82}
+.v104-balance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.v104-balance-card{min-width:0;padding:13px;border:1px solid #272a2e;border-radius:14px;background:rgba(7,8,10,.42)}.v104-balance-card.primary{border-color:rgba(213,179,71,.30);background:linear-gradient(145deg,rgba(213,179,71,.10),rgba(12,13,15,.68))}.v104-balance-card span{display:block;font-size:7.8px;letter-spacing:.08em;text-transform:uppercase;color:#6e716b}.v104-balance-card strong{display:block;margin-top:5px;font:800 18px/1.1 var(--font-display);letter-spacing:-.035em;color:#efede7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v104-balance-card.primary strong{color:#efd05a}.v104-balance-card small{display:block;margin-top:5px;font-size:8px;color:#646760;line-height:1.35}.v104-account-note{margin-top:10px;border:1px solid #25282c;border-radius:12px;background:#101214;padding:10px 11px;font-size:8.8px;line-height:1.5;color:#767972}.v104-account-note strong{color:#cdb55b}.v104-account-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.v104-balance-feedback{font-size:8.5px;color:#777a74}.v104-balance-feedback.ok{color:#72d997}.v104-balance-feedback.err{color:#ff7b82}
+@media(max-width:760px){.v104-balance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.v104-account-hero{padding:14px;border-radius:16px}.v104-account-name{font-size:17px}.v104-account-top{gap:8px}.v104-balance-card{padding:10px;border-radius:11px}.v104-balance-card strong{font-size:15px}.v104-account-pill{font-size:7px;padding:5px 7px}}
+@media(max-width:390px){.v104-account-hero{padding:12px}.v104-balance-grid{gap:6px}.v104-balance-card{padding:9px}.v104-balance-card strong{font-size:14px}}
+</style>
+<script id="v10-4-conta-meta-script">
+(function(){
+  function metaStatusV104(){return (cache.integrationStatus||[]).find(x=>String(x.provider)==='meta')||null}
+  function metaMetadataV104(){
+    let m=metaStatusV104()?.metadata||{};
+    if(typeof m==='string'){try{m=JSON.parse(m)}catch{m={}}}
+    return m||{};
+  }
+  function metaFinanceV104(){return metaMetadataV104().account_finance||null}
+  function fmtMoneyCurrencyV104(v,currency='BRL'){
+    if(v===null||v===undefined||!Number.isFinite(Number(v)))return '—';
+    try{return Number(v).toLocaleString('pt-BR',{style:'currency',currency:currency||'BRL'})}catch{return fmtVal(Number(v))}
+  }
+  function statusContaV104(v){return Number(v)===1?'Ativa':v==null?'—':`Status ${v}`}
+
+  window.renderContaMetaV104=function(){
+    const box=document.getElementById('v104-meta-account');if(!box)return;
+    const st=metaStatusV104(),f=metaFinanceV104();
+    if(!f){
+      box.innerHTML=`<div class="v104-account-hero"><div class="v104-account-name">Conta Meta ainda sem dados financeiros</div><div class="v104-account-sub">Atualize a integração da Meta para buscar saldo, tipo de cobrança, gasto acumulado e limite da conta.</div><div class="v104-account-actions" style="margin-top:14px"><button class="btn primary" onclick="sincronizarContaMetaV104()"><i class="ti ti-refresh"></i>Atualizar saldo</button></div></div>`;
+      return;
+    }
+    const cur=f.currency||'BRL',pre=!!f.is_prepay_account,active=Number(f.account_status)===1;
+    const available=pre?f.available_balance:null;
+    const balanceLabel=pre?'Saldo disponível':'Saldo / cobrança Meta';
+    const balanceValue=pre?available:f.meta_balance_field;
+    const balanceNote=pre
+      ? (available==null?'A fonte de saldo pré-pago não foi liberada pela API.':'saldo armazenado + créditos/cupons disponíveis')
+      : 'conta pós-paga; este valor não é crédito pré-pago';
+    box.innerHTML=`
+      <div class="v104-account-hero">
+        <div class="v104-account-top">
+          <div><div class="v104-account-kicker">Conta de anúncios Meta</div><div class="v104-account-name">${escHtml(f.name||'Areia Crôa')}</div><div class="v104-account-sub">act_${escHtml(f.account_id||'')} · ${escHtml(cur)} · ${pre?'Pré-paga':'Pós-paga'}</div></div>
+          <span class="v104-account-pill ${active?'':'off'}"><i class="ti ti-${active?'circle-check':'alert-circle'}"></i>${statusContaV104(f.account_status)}</span>
+        </div>
+        <div class="v104-balance-grid">
+          <div class="v104-balance-card primary"><span>${balanceLabel}</span><strong>${fmtMoneyCurrencyV104(balanceValue,cur)}</strong><small>${balanceNote}</small></div>
+          <div class="v104-balance-card"><span>Gasto acumulado</span><strong>${fmtMoneyCurrencyV104(f.amount_spent,cur)}</strong><small>valor acumulado informado pela conta Meta</small></div>
+          <div class="v104-balance-card"><span>Limite de gasto</span><strong>${fmtMoneyCurrencyV104(f.spend_cap,cur)}</strong><small>${f.spend_cap!=null?'limite configurado na conta':'sem limite informado'}</small></div>
+          <div class="v104-balance-card"><span>Disponível até o limite</span><strong>${fmtMoneyCurrencyV104(f.remaining_to_spend_cap,cur)}</strong><small>limite − gasto acumulado; não é o saldo pré-pago</small></div>
+          ${pre?`<div class="v104-balance-card"><span>Saldo armazenado</span><strong>${fmtMoneyCurrencyV104(f.stored_balance,cur)}</strong><small>STORED_BALANCE da fonte de pagamento</small></div><div class="v104-balance-card"><span>Créditos / cupons</span><strong>${fmtMoneyCurrencyV104(f.coupon_balance,cur)}</strong><small>créditos retornados pela Meta</small></div>`:''}
+          <div class="v104-balance-card"><span>Modelo de cobrança</span><strong>${pre?'Pré-pago':'Pós-pago'}</strong><small>informado diretamente pela Meta</small></div>
+          <div class="v104-balance-card"><span>Última atualização</span><strong style="font-size:13px">${fmtSyncV10(st?.last_success_at||st?.last_sync_at)}</strong><small>via Marketing API</small></div>
+        </div>
+        <div class="v104-account-note">${pre?'<strong>Saldo disponível</strong> é separado dos aportes manuais do CRM. O painel usa a fonte financeira da própria Meta quando ela está acessível.':'Em contas pós-pagas, o campo de saldo da Meta pode representar cobrança/valor em aberto. Por isso ele não é tratado como “dinheiro disponível” para anúncio.'}</div>
+        <div class="v104-account-actions" style="margin-top:12px"><button class="btn primary" onclick="sincronizarContaMetaV104()"><i class="ti ti-refresh"></i>Atualizar saldo</button><span id="v104-balance-feedback" class="v104-balance-feedback"></span></div>
+      </div>`;
+  };
+
+  window.sincronizarContaMetaV104=async function(){
+    const out=document.getElementById('v104-balance-feedback');if(out){out.className='v104-balance-feedback';out.textContent='Consultando Meta…'}
+    try{
+      const {data:{session},error}=await sb.auth.getSession();if(error)throw error;if(!session?.access_token)throw new Error('Sessão expirada');
+      const today=hoje(),ym=today.slice(0,7),body={since:`${ym}-01`,until:today};
+      await invocarIntegracaoV101('meta-ads-sync',body,session.access_token);
+      await carregarIntegracoesV10();renderContaMetaV104();renderAnuncios();renderDashboard();perfSaveV95();
+      const f=document.getElementById('v104-balance-feedback');if(f){f.className='v104-balance-feedback ok';f.textContent='Saldo atualizado agora'}
+    }catch(e){const f=document.getElementById('v104-balance-feedback');if(f){f.className='v104-balance-feedback err';f.textContent=e?.message||'Falha ao atualizar'}}
+  };
+
+  // Com Meta conectada, orçamento legado aberto não pode virar custo futuro fictício.
+  // Isso remove projeções como -R$ 859,49 geradas por R$ 59,49 reais + R$ 800 planejados antigos.
+  const financeiroMesV104Base=window.financeiroMes;
+  if(typeof financeiroMesV104Base==='function'){
+    window.financeiroMes=function(ym){
+      const f=financeiroMesV104Base(ym);
+      try{
+        if(typeof metaTemDadosV10==='function'&&metaTemDadosV10(ym)){
+          return {...f,verbaAberta:0,abertos:0,resultadoProjetado:f.resultado,margemProjetada:f.margem};
+        }
+      }catch(_){ }
+      return f;
+    };
+  }
+
+  function instalarAbaContaMetaV104(){
+    if(document.getElementById('panel-conta-meta'))return;
+    const app=document.getElementById('app-root');if(!app)return;
+    const panel=document.createElement('div');panel.id='panel-conta-meta';panel.className='panel';panel.innerHTML=`<div class="page-heading"><div class="page-heading-copy"><div class="page-eyebrow"><i class="ti ti-wallet"></i> Financeiro Meta</div><h2>Conta de anúncios</h2><p>Saldo, gasto acumulado, limite e modelo de cobrança consultados diretamente na sua conta Meta.</p></div></div><div id="v104-meta-account"></div>`;
+    const footer=app.querySelector('.app-footer-verse');footer?app.insertBefore(panel,footer):app.appendChild(panel);
+
+    const side=document.querySelector('.side-nav-item[data-tab="anuncios"]');
+    if(side)side.insertAdjacentHTML('afterend','<button class="side-nav-item" data-tab="conta-meta" onclick="trocarAba(\'conta-meta\')"><i class="ti ti-wallet"></i><span>Conta Meta</span></button>');
+    const tab=document.querySelector('.tab[data-tab="anuncios"]');
+    if(tab)tab.insertAdjacentHTML('afterend','<button class="tab" data-tab="conta-meta" onclick="trocarAba(\'conta-meta\',this)"><i class="ti ti-wallet"></i>Conta Meta</button>');
+    const drawer=document.querySelector('.drawer-item[data-tab="anuncios"]');
+    if(drawer)drawer.insertAdjacentHTML('afterend','<button class="drawer-item" data-tab="conta-meta" onclick="trocarAba(\'conta-meta\');fecharDrawer()"><i class="ti ti-wallet"></i>Conta Meta</button>');
+  }
+
+  const trocarAbaV104Base=window.trocarAba;
+  window.trocarAba=function(id,btn){
+    trocarAbaV104Base(id,btn);
+    if(id==='conta-meta'){
+      const k=document.getElementById('page-kicker');if(k)k.textContent='FINANCEIRO META';
+      const h=document.getElementById('page-title');if(h)h.textContent='Conta de anúncios';
+      Promise.resolve(carregarIntegracoesV10()).finally(()=>renderContaMetaV104());
+    }
+  };
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',instalarAbaContaMetaV104);
+  else instalarAbaContaMetaV104();
+})();
+</script>
+
+<style id="v10-5-periodo-carrinhos-style">
+/* V10.5 · Todos os meses + origem dos carrinhos */
+.v105-source-note{display:inline-flex;align-items:center;gap:5px;margin-left:5px;padding:2px 6px;border-radius:999px;border:1px solid #2a2d31;background:#121416;color:#8b8e87;font:750 6.8px var(--font-display);letter-spacing:.04em;text-transform:uppercase;vertical-align:1px}
+.v105-all-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border:1px solid rgba(213,179,71,.22);border-radius:999px;background:rgba(213,179,71,.055);color:#d9bd59;font:800 8px var(--font-display);letter-spacing:.06em;text-transform:uppercase}
+@media(max-width:560px){.v105-source-note{font-size:6.1px;padding:2px 5px}.v105-all-pill{font-size:7px;padding:5px 7px}}
+</style>
+<script id="v10-5-periodo-carrinhos-script">
+(function(){
+  /* O valor vazio do select significa TODOS OS MESES. Antes ele era convertido
+     silenciosamente para o mês atual, por isso o acumulado nunca funcionava. */
+  window.ymAnunciosV99=function(){
+    const el=document.getElementById('filter-mes-anuncios');
+    return el ? String(el.value||'') : hoje().slice(0,7);
+  };
+
+  const periodoV105=()=>window.ymAnunciosV99();
+  const rowsPeriodoV105=(rows,ym,key='data')=>{
+    if(!ym)return Array.isArray(rows)?rows:[];
+    return (rows||[]).filter(r=>String(r?.[key]||'').slice(0,7)===ym);
+  };
+  const aporteTotalV105=(ym,tipo='')=>(cache.aportes||[])
+    .filter(a=>a?.data&&(!ym||getMes(a.data)===ym)&&(!tipo||a.tipo===tipo))
+    .reduce((s,a)=>s+Number(a.valor||0),0);
+
+  window.metaRowsV10=function(ym){return rowsPeriodoV105(cache.metaAdsDaily,ym,'data')};
+  window.shopifyRowsV10=function(ym){return rowsPeriodoV105(cache.shopifyTrafficDaily,ym,'data')};
+  window.metaTemDadosV10=function(ym){return metaRowsV10(ym).length>0};
+  window.sumShopifyV10=function(ym,key){return shopifyRowsV10(ym).reduce((s,r)=>s+Number(r?.[key]||0),0)};
+  window.yampiPedidosMesV10=function(ym){return pedidosBaseV9().filter(p=>(!ym||getMes(p.data)===ym)&&String(p.origem_dados||'').toLowerCase().includes('yampi'))};
+  window.trafegoPedidosMesV10=function(ym){return pedidosBaseV9().filter(p=>(!ym||getMes(p.data)===ym)&&(p.via_trafego===true||p.via_trafego==='true'))};
+
+  window.resumoAutomaticoV10=function(ym=periodoV105()){
+    const meta=metaTemDadosV10(ym);
+    const gastoTotal=meta?metaSpendV10(ym,'todos'):aporteTotalV105(ym);
+    const gastoVendas=meta?metaSpendV10(ym,'vendas'):aporteTotalV105(ym,'vendas');
+    const gastoBranding=meta?metaSpendV10(ym,'branding'):aporteTotalV105(ym,'branding');
+    const naoClassificado=meta?metaSpendV10(ym,'nao_classificado'):0;
+    const sessoes=sumShopifyV10(ym,'sessions');
+    const cart=sumShopifyV10(ym,'sessions_with_cart_additions');
+    const checkout=sumShopifyV10(ym,'sessions_that_reached_checkout');
+    const shopifyCompleted=sumShopifyV10(ym,'sessions_that_completed_checkout');
+    const metaCart=metaRowsV10(ym).reduce((s,r)=>s+Number(r.add_to_cart||0),0);
+    const metaCheckout=metaRowsV10(ym).reduce((s,r)=>s+Number(r.initiate_checkout||0),0);
+    const metaPurchases=metaRowsV10(ym).reduce((s,r)=>s+Number(r.purchases||0),0);
+    const pedidos=trafegoPedidosMesV10(ym);
+    const receita=pedidos.reduce((s,p)=>s+Number(p.receita||0),0);
+    const compras=pedidos.length;
+    const yampi=yampiPedidosMesV10(ym).length;
+    return {
+      meta,gastoTotal,gastoVendas,gastoBranding,naoClassificado,
+      sessoes,cart,checkout,shopifyCompleted,metaCart,metaCheckout,metaPurchases,
+      pedidos,receita,compras,yampi,
+      roas:gastoVendas>0?receita/gastoVendas:0,
+      cpa:compras>0?gastoVendas/compras:0,
+      conversao:sessoes>0?compras/sessoes*100:0,
+      custoSessao:sessoes>0?gastoVendas/sessoes:0
+    };
+  };
+
+  /* Mostra explicitamente os dois conceitos de carrinho.
+     Shopify = sessões da loja com adição ao carrinho (todos os canais).
+     Meta = add_to_cart atribuído aos anúncios dentro da janela da Meta. */
+  window.renderAutoV10=function(){
+    const ym=periodoV105(),d=resumoAutomaticoV10(ym),wrap=document.getElementById('v10-source-grid');
+    if(!wrap)return;
+    const spendTag=d.meta?'<span class="v10-source-tag auto">Meta API</span>':'<span class="v10-source-tag fallback">aportes</span>';
+    const shopTag=d.sessoes?'<span class="v10-source-tag auto">Shopify</span>':'<span class="v10-source-tag fallback">sem dados</span>';
+    const periodoTxt=ym?mesLabel(ym):'todos os meses';
+    wrap.innerHTML=`
+      <div class="v10-source-card meta"><span>Gasto Meta total ${spendTag}</span><strong>${fmtVal(d.gastoTotal)}</strong><small>custo real · ${periodoTxt}</small></div>
+      <div class="v10-source-card meta"><span>Mídia de vendas</span><strong>${fmtVal(d.gastoVendas)}</strong><small>base usada em ROAS e CPA</small></div>
+      <div class="v10-source-card branding"><span>Branding</span><strong>${fmtVal(d.gastoBranding)}</strong><small>entra no custo, fora do ROAS</small></div>
+      <div class="v10-source-card shopify"><span>Sessões ${shopTag}</span><strong>${d.sessoes?d.sessoes.toLocaleString('pt-BR'):'—'}</strong><small>visitas reais da loja</small></div>
+      <div class="v10-source-card shopify"><span>Carrinhos <span class="v105-source-note">Shopify</span></span><strong>${d.cart.toLocaleString('pt-BR')}</strong><small>sessões com adição ao carrinho · todos os canais</small></div>
+      <div class="v10-source-card meta"><span>Carrinhos <span class="v105-source-note">Meta</span></span><strong>${d.metaCart.toLocaleString('pt-BR')}</strong><small>add_to_cart atribuídos aos anúncios</small></div>
+      <div class="v10-source-card shopify"><span>Checkout <span class="v105-source-note">Shopify</span></span><strong>${d.checkout.toLocaleString('pt-BR')}</strong><small>sessões que chegaram ao checkout</small></div>
+      <div class="v10-source-card meta"><span>Checkout <span class="v105-source-note">Meta</span></span><strong>${d.metaCheckout.toLocaleString('pt-BR')}</strong><small>checkouts atribuídos aos anúncios</small></div>
+      <div class="v10-source-card yampi"><span>Pedidos via tráfego</span><strong>${d.compras}</strong><small>${d.yampi} pedidos Yampi no período</small></div>
+      <div class="v10-source-card yampi"><span>Receita via tráfego</span><strong>${fmtVal(d.receita)}</strong><small>Yampi/CRM · pedidos atribuídos</small></div>
+      <div class="v10-source-card"><span>ROAS vendas</span><strong>${d.roas.toFixed(2)}x</strong><small>receita CRM ÷ mídia de vendas</small></div>
+      <div class="v10-source-card"><span>CPA</span><strong>${fmtVal(d.cpa)}</strong><small>mídia de vendas ÷ pedidos atribuídos</small></div>
+      <div class="v10-source-card"><span>Conversão da loja</span><strong>${d.sessoes?d.conversao.toFixed(2)+'%':'—'}</strong><small>pedidos via tráfego ÷ sessões</small></div>
+      <div class="v10-source-card"><span>Custo / sessão</span><strong>${d.sessoes?fmtVal(d.custoSessao):'—'}</strong><small>mídia de vendas ÷ sessões</small></div>`;
+    const warn=document.getElementById('v10-classification-warning');
+    if(warn)warn.innerHTML=d.naoClassificado>0?`<div class="v10-warning-box"><strong>${fmtVal(d.naoClassificado)} em campanhas ainda não classificadas.</strong> Esse valor entra no custo total, mas fica fora do ROAS até você marcar a campanha como Vendas ou Branding.</div>`:'';
+    renderConnectionsV10();
+  };
+
+  function renderResumoTodosV105(){
+    const d=resumoAutomaticoV10('');
+    const title=document.getElementById('v99-month-title'),sub=document.getElementById('v99-month-subtitle'),status=document.getElementById('v99-month-status'),grid=document.getElementById('v99-month-grid'),note=document.getElementById('v99-close-note'),btn=document.getElementById('v99-btn-fechar-mes');
+    if(title)title.textContent='Acumulado · todos os meses';
+    if(sub)sub.textContent='Soma de todos os períodos disponíveis no Supabase para Meta, Shopify e CRM.';
+    if(status)status.innerHTML='<span class="v105-all-pill"><i class="ti ti-sum"></i> Acumulado</span>';
+    if(btn)btn.style.display='none';
+    if(grid)grid.innerHTML=`
+      <div class="v99-metric"><span>Investimento total</span><strong>${fmtVal(d.gastoTotal)}</strong><small>gasto Meta acumulado</small></div>
+      <div class="v99-metric sales"><span>Investimento em vendas</span><strong>${fmtVal(d.gastoVendas)}</strong><small>base acumulada de ROAS e CPA</small></div>
+      <div class="v99-metric branding"><span>Branding</span><strong>${fmtVal(d.gastoBranding)}</strong><small>custo acumulado fora do ROAS</small></div>
+      <div class="v99-metric success"><span>Receita via tráfego</span><strong>${fmtVal(d.receita)}</strong><small>${d.compras} pedidos atribuídos</small></div>
+      <div class="v99-metric"><span>ROAS vendas</span><strong>${d.roas.toFixed(2)}x</strong><small>receita acumulada ÷ mídia de vendas</small></div>
+      <div class="v99-metric"><span>CPA</span><strong>${fmtVal(d.cpa)}</strong><small>mídia acumulada ÷ pedidos</small></div>
+      <div class="v99-metric"><span>Sessões Shopify</span><strong>${d.sessoes.toLocaleString('pt-BR')}</strong><small>soma de todos os dias sincronizados</small></div>
+      <div class="v99-metric"><span>Conversão</span><strong>${d.sessoes?d.conversao.toFixed(2)+'%':'—'}</strong><small>${d.sessoes?fmtVal(d.custoSessao)+' por sessão':'sem sessões'}</small></div>`;
+    if(note){note.className='v99-close-note';note.innerHTML='<i class="ti ti-info-circle"></i><div><strong>Visão acumulada.</strong> O fechamento continua sendo feito mês a mês; por isso o botão “Fechar mês” fica oculto nesta visão.</div>'}
+  }
+
+  function renderLedgerTodosV105(){
+    const all=[...(cache.aportes||[])].filter(a=>a?.data).sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))||String(b.created_at||'').localeCompare(String(a.created_at||'')));
+    const vendas=all.filter(a=>a.tipo!=='branding'),branding=all.filter(a=>a.tipo==='branding');
+    const summary=document.getElementById('v99-ledger-summary'),list=document.getElementById('v99-ledger-list');
+    if(summary){summary.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';summary.innerHTML=`
+      <div class="v99-ledger-total"><span>Uso no financeiro</span><strong>Somente caixa</strong></div>
+      <div class="v99-ledger-total"><span>Total aportado</span><strong>${fmtVal(aporteTotalV105(''))}</strong></div>
+      <div class="v99-ledger-total sales"><span>Vendas</span><strong>${fmtVal(aporteTotalV105('','vendas'))}</strong></div>
+      <div class="v99-ledger-total branding"><span>Branding</span><strong>${fmtVal(aporteTotalV105('','branding'))}</strong></div>`;}
+    if(!list)return;
+    if(!all.length){list.innerHTML='<div class="v99-empty">Nenhum aporte registrado.</div>';return}
+    const row=a=>`<div class="v99-ledger-row ${a.tipo==='branding'?'branding':'sales'}"><div class="v99-ledger-date">${fmtData(a.data)}</div><div class="v99-ledger-info"><strong>${escHtml(a.plataforma||'Outro')}</strong><small>${escHtml(a.descricao||mesLabel(getMes(a.data)))}</small></div><div class="v99-ledger-value">${fmtVal(a.valor)}</div><div class="v99-ledger-actions"><button class="btn sm" onclick="abrirEditarAporteV98('${a.id}')"><i class="ti ti-pencil"></i>Editar</button><button class="btn danger sm" onclick="deletarAporteV98('${a.id}')"><i class="ti ti-trash"></i>Excluir</button></div></div>`;
+    list.innerHTML=`<div class="v99-ledger-group"><div class="v99-group-title"><span>Todos os aportes · ${all.length}</span><b>${fmtVal(aporteTotalV105(''))}</b></div>${all.map(row).join('')}</div>`;
+  }
+
+  const renderAnunciosV105Mes=window.renderAnuncios;
+  window.renderAnuncios=function(){
+    const ym=periodoV105();
+    if(ym){
+      const btn=document.getElementById('v99-btn-fechar-mes');if(btn)btn.style.display='';
+      return renderAnunciosV105Mes();
+    }
+    renderResumoTodosV105();
+    renderLedgerTodosV105();
+    if(typeof renderCarrinhosAbandonados==='function')renderCarrinhosAbandonados();
+    renderAutoV10();
+    renderCampanhasV10();
+    renderConnectionsV10();
+    setTimeout(()=>{try{animarNumeros(document.getElementById('panel-anuncios'))}catch{}},20);
+  };
+
+  /* Sincronização também passa a aceitar "Todos os meses". Nesse caso usa como
+     início o mês mais antigo conhecido pelo CRM e vai até hoje. */
+  window.sincronizarIntegracoesV10=async function(){
+    const btn=document.getElementById('v10-sync-btn');
+    const original=btn?.innerHTML||'<i class="ti ti-refresh"></i>Sincronizar agora';
+    if(btn){btn.disabled=true;btn.classList.add('v10-syncing');btn.innerHTML='<i class="ti ti-refresh"></i>Sincronizando…'}
+    syncFeedbackV101('Consultando Meta e Shopify…','working');
+    try{
+      const ym=periodoV105(),today=hoje(),currentYm=today.slice(0,7);
+      let since,until=today;
+      if(ym){
+        if(ym>currentYm)throw new Error('Não é possível sincronizar um mês futuro.');
+        const [y,m]=ym.split('-').map(Number);since=`${ym}-01`;
+        const monthEnd=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
+        until=ym===currentYm?today:monthEnd;
+      }else{
+        const dates=[
+          ...(cache.metaAdsDaily||[]).map(x=>x.data),
+          ...(cache.shopifyTrafficDaily||[]).map(x=>x.data),
+          ...pedidosBaseV9().map(x=>x.data),
+          ...(cache.aportes||[]).map(x=>x.data)
+        ].map(String).filter(x=>/^\d{4}-\d{2}-\d{2}/.test(x)).sort();
+        since=dates.length?`${dates[0].slice(0,7)}-01`:`${today.slice(0,4)}-01-01`;
+      }
+      const body={since,until};
+      const {data:{session},error:sessionError}=await sb.auth.getSession();
+      if(sessionError)throw sessionError;if(!session?.access_token)throw new Error('Sua sessão expirou. Saia do CRM e entre novamente.');
+      const settled=await Promise.allSettled([
+        invocarIntegracaoV101('meta-ads-sync',body,session.access_token),
+        invocarIntegracaoV101('shopify-traffic-sync',body,session.access_token)
+      ]);
+      const labels=['Meta','Shopify'],failed=[];settled.forEach((r,i)=>{if(r.status==='rejected')failed.push(`${labels[i]}: ${r.reason?.message||r.reason}`)});
+      await new Promise(r=>setTimeout(r,180));await carregarIntegracoesV10();renderAnuncios();renderDashboard();perfSaveV95();
+      if(failed.length)syncFeedbackV101(failed.length===2?'Falha ao sincronizar':'Sincronização parcial','err',failed.join(' | '));
+      else syncFeedbackV101(ym?`Atualizado · ${since.split('-').reverse().join('/')} a ${until.split('-').reverse().join('/')}`:`Acumulado atualizado · desde ${since.split('-').reverse().join('/')}`,'ok');
+    }catch(e){console.error('[V10.5] sync',e);syncFeedbackV101('Não foi possível sincronizar','err',e?.message||String(e));}
+    finally{if(btn){btn.disabled=false;btn.classList.remove('v10-syncing');btn.innerHTML=original}}
+  };
+})();
+</script>
+
 </body>
 </html>
