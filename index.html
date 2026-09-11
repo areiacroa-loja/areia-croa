@@ -967,7 +967,7 @@ body::before{
         <p>Abra uma verba, acompanhe o ciclo e feche com gasto real, sessões, carrinhos, compras e faturamento atribuído. O financeiro usa apenas o gasto efetivamente realizado.</p>
       </div>
       <div class="page-actions-v96">
-        <button class="btn" onclick="abrirTrafegoMensalV96()"><i class="ti ti-calendar-dollar"></i>Lançar tráfego mensal</button>
+        <button class="btn" onclick="abrirNovoAporteV98()"><i class="ti ti-cash-banknote"></i>Registrar aporte</button>
         <button class="btn primary" onclick="abrirModalNovoInvestimento()"><i class="ti ti-plus"></i>Novo investimento</button>
       </div>
     </div>
@@ -983,6 +983,19 @@ body::before{
         <span class="period-pill"><i class="ti ti-circle-filled" style="font-size:7px"></i> Vendas</span>
         <span class="period-pill" style="background:var(--purple-soft);color:var(--purple)"><i class="ti ti-palette"></i> Branding</span>
       </div>
+    </div>
+
+
+    <div class="section-shell v98-aportes-shell" id="v98-aportes-shell">
+      <div class="section-header v98-aportes-head">
+        <div>
+          <h3>Aportes de investimento</h3>
+          <p>Cada depósito de mídia fica registrado separadamente. O total do mês é a soma destes lançamentos, e cada aporte pode ser editado ou excluído.</p>
+        </div>
+        <button class="btn primary sm" onclick="abrirNovoAporteV98()"><i class="ti ti-plus"></i>Novo aporte</button>
+      </div>
+      <div class="v98-aporte-kpis" id="v98-aporte-kpis"></div>
+      <div class="v98-aporte-list" id="v98-aporte-list"></div>
     </div>
 
     <div class="cards" id="anuncio-cards"></div>
@@ -3377,6 +3390,291 @@ window.addEventListener('focus',()=>{
   sincronizarTelaAtivaV97('ao focar');
 });
 window.addEventListener('online',()=>sincronizarTelaAtivaV97('online'));
+</script>
+
+
+<style id="v9-8-aportes-style">
+/* ═══════════════════════════════════════════════════════════════
+   V9.8 · APORTES INDIVIDUAIS DE INVESTIMENTO
+   ═══════════════════════════════════════════════════════════════ */
+.v98-aportes-shell{position:relative;overflow:hidden}
+.v98-aportes-shell:before{content:"";position:absolute;right:-140px;top:-150px;width:360px;height:290px;background:radial-gradient(circle,rgba(212,175,55,.10),transparent 68%);pointer-events:none}
+.v98-aportes-head{position:relative;z-index:1}
+.v98-aporte-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 14px}
+.v98-aporte-kpi{padding:13px 14px;border:1px solid #25272a;border-radius:14px;background:linear-gradient(145deg,#151618,#101113)}
+.v98-aporte-kpi span{display:block;font:700 8.5px var(--font-display);text-transform:uppercase;letter-spacing:.08em;color:#70736d;margin-bottom:5px}
+.v98-aporte-kpi strong{display:block;font:800 17px/1.1 var(--font-display);letter-spacing:-.025em;color:#eceae3}
+.v98-aporte-kpi small{display:block;color:#676a64;font-size:8.7px;margin-top:4px}
+.v98-aporte-kpi.gold{background:linear-gradient(145deg,rgba(212,175,55,.13),rgba(212,175,55,.025));border-color:rgba(212,175,55,.22)}
+.v98-aporte-kpi.gold strong{color:#efd15c}
+.v98-aporte-list{display:grid;gap:8px}
+.v98-aporte-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:14px 15px;border:1px solid #24262a;border-radius:15px;background:linear-gradient(145deg,#151618,#101113)}
+.v98-aporte-row:hover{border-color:#35383d;background:linear-gradient(145deg,#18191b,#111214)}
+.v98-aporte-main{min-width:0}
+.v98-aporte-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+.v98-aporte-platform{font:800 12px var(--font-display);color:#e8e7e1}
+.v98-aporte-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:rgba(212,175,55,.09);color:#dbc45e;font:750 8px var(--font-display);letter-spacing:.03em}
+.v98-aporte-badge.branding{background:var(--purple-soft);color:var(--purple)}
+.v98-aporte-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:9.5px;color:#777a74}
+.v98-aporte-desc{font-size:10px;color:#afb1ac;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:700px}
+.v98-aporte-side{display:flex;align-items:center;gap:12px}
+.v98-aporte-value{text-align:right;font:800 16px var(--font-display);color:#efd05a;white-space:nowrap}
+.v98-aporte-actions{display:flex;gap:6px}
+.v98-aporte-empty{padding:18px;border:1px dashed #2a2c30;border-radius:14px;text-align:center;color:#777a74;font-size:10px}
+.v98-aporte-warning{margin:10px 0;padding:10px 12px;border:1px solid rgba(255,179,71,.18);background:rgba(255,179,71,.05);border-radius:12px;color:#caa55d;font-size:10px}
+@media(max-width:760px){
+  .v98-aporte-kpis{grid-template-columns:1fr 1fr}
+  .v98-aporte-row{grid-template-columns:1fr}
+  .v98-aporte-side{justify-content:space-between}
+  .v98-aporte-value{text-align:left}
+}
+</style>
+
+<script id="v9-8-aportes">
+/* ═══════════════════════════════════════════════════════════════
+   V9.8 · APORTES INDIVIDUAIS
+   O financeiro passa a usar a soma dos aportes do mês.
+   Se a tabela ainda não existir, o CRM mantém o cálculo legado.
+   ═══════════════════════════════════════════════════════════════ */
+if(!Array.isArray(cache.aportes)) cache.aportes=[];
+let aportesSchemaV98=true;
+
+function aportesMesV98(ym=''){
+  return (cache.aportes||[])
+    .filter(a=>a&&a.data&&(!ym||getMes(a.data)===ym))
+    .sort((a,b)=>String(b.data||'').localeCompare(String(a.data||'')) || String(b.created_at||'').localeCompare(String(a.created_at||'')));
+}
+function totalAportesMesV98(ym=''){
+  return aportesMesV98(ym).reduce((s,a)=>s+Number(a.valor||0),0);
+}
+function mesSelecionadoAportesV98(){
+  return document.getElementById('filter-mes-anuncios')?.value||'';
+}
+function dataPadraoAporteV98(){
+  const ym=mesSelecionadoAportesV98();
+  if(!ym)return hoje();
+  if(ym===hoje().slice(0,7))return hoje();
+  return `${ym}-01`;
+}
+
+async function carregarAportesV98(){
+  const r=await sb.from('investimento_aportes')
+    .select('id,data,plataforma,tipo,valor,descricao,origem,origem_anuncio_id,created_at,updated_at')
+    .order('data',{ascending:false})
+    .order('created_at',{ascending:false});
+  if(r.error){
+    aportesSchemaV98=false;
+    console.warn('[V9.8] tabela investimento_aportes indisponível',r.error);
+    return false;
+  }
+  aportesSchemaV98=true;
+  cache.aportes=r.data||[];
+  return true;
+}
+
+function renderAportesV98(){
+  const kpis=document.getElementById('v98-aporte-kpis');
+  const lista=document.getElementById('v98-aporte-list');
+  if(!kpis||!lista)return;
+
+  if(!aportesSchemaV98){
+    kpis.innerHTML='';
+    lista.innerHTML=`<div class="v98-aporte-warning"><strong>Falta a migração V9.8.</strong> Rode o SQL de aportes no Supabase para liberar os lançamentos individuais.</div>`;
+    return;
+  }
+
+  const ym=mesSelecionadoAportesV98();
+  const rows=aportesMesV98(ym);
+  const total=rows.reduce((s,a)=>s+Number(a.valor||0),0);
+  const maior=rows.reduce((m,a)=>Math.max(m,Number(a.valor||0)),0);
+  const media=rows.length?total/rows.length:0;
+  const label=ym?mesLabel(ym):'Todo o período';
+
+  kpis.innerHTML=`
+    <div class="v98-aporte-kpi gold"><span>Investido</span><strong>${fmtVal(total)}</strong><small>${escHtml(label)}</small></div>
+    <div class="v98-aporte-kpi"><span>Aportes</span><strong>${rows.length}</strong><small>lançamentos separados</small></div>
+    <div class="v98-aporte-kpi"><span>Média por aporte</span><strong>${fmtVal(media)}</strong><small>valor médio depositado</small></div>
+    <div class="v98-aporte-kpi"><span>Maior aporte</span><strong>${fmtVal(maior)}</strong><small>no período filtrado</small></div>`;
+
+  lista.innerHTML=rows.length?rows.map(a=>`
+    <div class="v98-aporte-row">
+      <div class="v98-aporte-main">
+        <div class="v98-aporte-top">
+          <span class="v98-aporte-platform">${escHtml(a.plataforma||'Outro')}</span>
+          <span class="v98-aporte-badge ${a.tipo==='branding'?'branding':''}">${a.tipo==='branding'?'Branding':'Vendas'}</span>
+          ${a.origem==='migracao_v98'?'<span class="v98-aporte-badge"><i class="ti ti-history"></i> legado migrado</span>':''}
+        </div>
+        <div class="v98-aporte-meta">
+          <span><i class="ti ti-calendar"></i> ${fmtData(a.data)}</span>
+          <span><i class="ti ti-wallet"></i> Aporte individual</span>
+        </div>
+        ${a.descricao?`<div class="v98-aporte-desc">${escHtml(a.descricao)}</div>`:''}
+      </div>
+      <div class="v98-aporte-side">
+        <div class="v98-aporte-value">${fmtVal(a.valor)}</div>
+        <div class="v98-aporte-actions">
+          <button class="btn sm" onclick="abrirEditarAporteV98('${a.id}')"><i class="ti ti-pencil"></i>Editar</button>
+          <button class="btn danger sm" onclick="deletarAporteV98('${a.id}')"><i class="ti ti-trash"></i>Excluir</button>
+        </div>
+      </div>
+    </div>`).join(''):`<div class="v98-aporte-empty">Nenhum aporte registrado em ${escHtml(label)}. Clique em <strong>Novo aporte</strong> para registrar cada depósito de mídia separadamente.</div>`;
+}
+
+function abrirNovoAporteV98(){
+  if(!aportesSchemaV98){alert('Rode primeiro a migração SQL V9.8 de aportes no Supabase.');return}
+  document.getElementById('modal-item-conteudo').innerHTML=`
+    <button class="modal-close" onclick="fecharModalItem()">&times;</button>
+    <div class="modal-header"><div><div class="modal-title">Novo aporte</div><div class="modal-subtitle">Registre exatamente o valor depositado na mídia. Cada depósito fica independente.</div></div></div>
+    <div class="form-grid col2">
+      <div><label>Data do aporte</label><input type="date" id="v98-aporte-data" value="${dataPadraoAporteV98()}"></div>
+      <div><label>Valor depositado (R$)</label><input type="number" id="v98-aporte-valor" min="0.01" step="0.01" placeholder="0,00"></div>
+      <div><label>Plataforma</label><select id="v98-aporte-plataforma"><option>Meta Ads</option><option>Google Ads</option><option>TikTok Ads</option><option>Pinterest Ads</option><option>Influencer</option><option>Outro</option></select></div>
+      <div><label>Tipo</label><select id="v98-aporte-tipo"><option value="vendas">Vendas</option><option value="branding">Branding</option></select></div>
+      <div style="grid-column:1/-1"><label>Observação</label><input id="v98-aporte-descricao" placeholder="Ex: recarga Meta Ads · campanha coleção nova"></div>
+    </div>
+    <div class="form-note">O total de investimento do mês será calculado pela soma de todos os aportes. Este valor entra automaticamente em tráfego, lucro, margem, CPA e ROAS.</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn primary" onclick="salvarAporteV98()"><i class="ti ti-check"></i>Salvar aporte</button></div>`;
+  abrirModalItem();
+}
+
+function abrirEditarAporteV98(id){
+  const a=(cache.aportes||[]).find(x=>String(x.id)===String(id));if(!a)return;
+  document.getElementById('modal-item-conteudo').innerHTML=`
+    <button class="modal-close" onclick="fecharModalItem()">&times;</button>
+    <div class="modal-header"><div><div class="modal-title">Editar aporte</div><div class="modal-subtitle">Corrija data, valor, plataforma ou descrição deste depósito.</div></div></div>
+    <div class="form-grid col2">
+      <div><label>Data do aporte</label><input type="date" id="v98-aporte-data" value="${a.data||hoje()}"></div>
+      <div><label>Valor depositado (R$)</label><input type="number" id="v98-aporte-valor" min="0.01" step="0.01" value="${Number(a.valor||0)}"></div>
+      <div><label>Plataforma</label><select id="v98-aporte-plataforma">
+        ${['Meta Ads','Google Ads','TikTok Ads','Pinterest Ads','Influencer','Outro'].map(p=>`<option ${p===(a.plataforma||'')?'selected':''}>${p}</option>`).join('')}
+      </select></div>
+      <div><label>Tipo</label><select id="v98-aporte-tipo"><option value="vendas" ${a.tipo!=='branding'?'selected':''}>Vendas</option><option value="branding" ${a.tipo==='branding'?'selected':''}>Branding</option></select></div>
+      <div style="grid-column:1/-1"><label>Observação</label><input id="v98-aporte-descricao" value="${escHtml(a.descricao||'')}"></div>
+    </div>
+    <div class="modal-actions"><button class="btn danger" onclick="fecharModalItem();deletarAporteV98('${a.id}')"><i class="ti ti-trash"></i>Excluir</button><button class="btn primary" onclick="salvarAporteV98('${a.id}')"><i class="ti ti-check"></i>Salvar alterações</button></div>`;
+  abrirModalItem();
+}
+
+async function salvarAporteV98(id=''){
+  const data=document.getElementById('v98-aporte-data')?.value||hoje();
+  const valor=Number(document.getElementById('v98-aporte-valor')?.value)||0;
+  if(valor<=0){alert('Informe um valor de aporte maior que zero.');return}
+  const row={
+    data,
+    valor,
+    plataforma:document.getElementById('v98-aporte-plataforma')?.value||'Outro',
+    tipo:document.getElementById('v98-aporte-tipo')?.value||'vendas',
+    descricao:document.getElementById('v98-aporte-descricao')?.value.trim()||null,
+    origem:id?'manual_editado':'manual',
+    updated_at:new Date().toISOString()
+  };
+  const r=id
+    ? await sb.from('investimento_aportes').update(row).eq('id',id)
+    : await sb.from('investimento_aportes').insert({...row,created_at:new Date().toISOString()});
+  await checarErro(r,id?'Erro ao editar aporte':'Erro ao registrar aporte');
+  fecharModalItem();
+  await atualizarAportesV98();
+}
+
+async function deletarAporteV98(id){
+  const a=(cache.aportes||[]).find(x=>String(x.id)===String(id));
+  if(!confirm(`Excluir este aporte${a?` de ${fmtVal(a.valor)}`:''}? O total de investimento do mês será recalculado.`))return;
+  await checarErro(await sb.from('investimento_aportes').delete().eq('id',id),'Erro ao excluir aporte');
+  await atualizarAportesV98();
+}
+
+async function atualizarAportesV98(){
+  await carregarAportesV98();
+  popularSelectMes();
+  renderDashboard();
+  if(typeof renderMetas==='function'&&perfActiveTabV95()==='metas')renderMetas();
+  if(perfActiveTabV95()==='anuncios')renderAnuncios();
+  perfSaveV95();
+}
+
+/* Cálculo financeiro: aportes viram a fonte do gasto de mídia.
+   Em caso de schema ausente, mantém o cálculo V9.7. */
+const gastoAdsTotalV97=gastoAdsTotal;
+gastoAdsTotal=function(fm=''){
+  if(!aportesSchemaV98)return gastoAdsTotalV97(fm);
+  if(fm){
+    const rows=aportesMesV98(fm);
+    if(rows.length)return rows.reduce((s,a)=>s+Number(a.valor||0),0);
+    return gastoAdsTotalV97(fm);
+  }
+  const meses=new Set();
+  pedidosBaseV9().forEach(p=>p.data&&meses.add(getMes(p.data)));
+  (cache.anuncios||[]).forEach(a=>a.data&&meses.add(getMes(a.data)));
+  (cache.aportes||[]).forEach(a=>a.data&&meses.add(getMes(a.data)));
+  return [...meses].reduce((s,ym)=>{
+    const rows=aportesMesV98(ym);
+    return s+(rows.length?rows.reduce((x,a)=>x+Number(a.valor||0),0):gastoAdsTotalV97(ym));
+  },0);
+};
+
+/* Meses presentes apenas nos aportes também entram nos filtros. */
+const popularSelectMesV97=popularSelectMes;
+popularSelectMes=function(){
+  popularSelectMesV97();
+  const extras=[...new Set((cache.aportes||[]).map(a=>getMes(a.data)).filter(Boolean))].sort().reverse();
+  ['filter-mes','filter-mes-vendas','filter-mes-hist','filter-mes-anuncios'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    const atual=el.value;
+    const existentes=new Set([...el.options].map(o=>o.value));
+    extras.forEach(ym=>{
+      if(existentes.has(ym))return;
+      const opt=document.createElement('option');opt.value=ym;opt.textContent=mesLabel(ym);el.appendChild(opt);
+    });
+    const vals=[...el.options].filter(o=>o.value).map(o=>o.value).sort().reverse();
+    const all=[...el.options].find(o=>o.value==='');
+    el.innerHTML='';
+    if(all)el.appendChild(all);
+    vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=mesLabel(v);el.appendChild(o)});
+    if([...el.options].some(o=>o.value===atual))el.value=atual;
+  });
+};
+
+/* A lista aparece junto do render normal de Anúncios. */
+const renderAnunciosV97=renderAnuncios;
+renderAnuncios=function(){
+  renderAnunciosV97();
+  renderAportesV98();
+};
+
+/* Carrega aportes junto do resumo principal do Supabase. */
+const carregarResumoV97=carregarResumoV95;
+carregarResumoV95=async function(opts={}){
+  const ap=carregarAportesV98();
+  const base=carregarResumoV97(opts);
+  await base;
+  await ap;
+  popularSelectMes();
+  renderDashboard();
+  if(perfActiveTabV95()==='anuncios')renderAnuncios();
+};
+
+/* Inclui aportes no cache instantâneo, sem torná-lo fonte principal. */
+const perfSnapshotV97=perfSnapshotV95;
+perfSnapshotV95=function(){
+  return {...perfSnapshotV97(),aportes:Array.isArray(cache.aportes)?cache.aportes:[]};
+};
+const perfLoadV97=perfLoadV95;
+perfLoadV95=function(){
+  const ok=perfLoadV97();
+  try{
+    const raw=localStorage.getItem(PERF_V95_KEY);
+    if(raw){
+      const x=JSON.parse(raw);
+      if(Array.isArray(x.aportes))cache.aportes=x.aportes;
+    }
+  }catch(e){console.warn('[V9.8] cache de aportes',e)}
+  return ok;
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const p=document.querySelector('#panel-anuncios .page-heading-copy p');
+  if(p)p.textContent='Planeje campanhas e registre cada aporte de mídia separadamente. O financeiro usa a soma real dos depósitos do período.';
+});
 </script>
 
 </body>
