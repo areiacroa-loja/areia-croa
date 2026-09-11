@@ -1009,7 +1009,7 @@ body::before{
       <div class="section-header">
         <div>
           <h3>Campanhas Meta</h3>
-          <p>Classifique cada campanha uma única vez. Branding entra no custo do mês, mas fica fora do ROAS de vendas.</p>
+          <p>Somente campanhas ativas agora. Veja o funil de e-commerce da Meta e classifique cada campanha como Vendas ou Branding.</p>
         </div>
         <span class="section-count" id="v10-campaign-count">0</span>
       </div>
@@ -4658,6 +4658,155 @@ document.addEventListener('DOMContentLoaded',()=>{
 <script id="v10-2-sync-feedback">
 const syncFeedbackV101BaseV102 = typeof syncFeedbackV101 === 'function' ? syncFeedbackV101 : null;
 if(syncFeedbackV101BaseV102){syncFeedbackV101=function(text,type='working',detail=''){syncFeedbackV101BaseV102(text,type,detail);const el=document.querySelector('.v101-sync-feedback');if(el&&type==='err'&&detail){const short=String(detail).replace(/\s+/g,' ').slice(0,260);el.textContent=`${text} · ${short}`;el.title=String(detail)}}}
+</script>
+
+
+<style id="v10-3-meta-ecom-style">
+/* ═══════════════════════════════════════════════════════════════
+   V10.3 · CAMPANHAS ATIVAS + FUNIL E-COMMERCE META
+   ═══════════════════════════════════════════════════════════════ */
+.v10-campaign-list{display:grid;gap:10px;margin-top:12px}
+.v10-campaign-row{
+  display:block!important;padding:14px!important;border:1px solid #282b2f!important;border-radius:15px!important;
+  background:linear-gradient(145deg,#151719,#0e0f11)!important;overflow:hidden
+}
+.v10-campaign-row:hover{border-color:#393d42!important}
+.v103-campaign-head{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;margin-bottom:12px}
+.v103-campaign-title{min-width:0;display:flex;align-items:center;gap:8px}
+.v103-campaign-title strong{font:800 11.5px var(--font-display);color:#efede7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v103-active-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 7px;border-radius:999px;border:1px solid rgba(72,209,122,.22);background:rgba(72,209,122,.06);color:#70db95;font:800 7.4px var(--font-display);letter-spacing:.08em;text-transform:uppercase;flex-shrink:0}
+.v103-active-pill:before{content:"";width:5px;height:5px;border-radius:50%;background:#48d17a;box-shadow:0 0 8px rgba(72,209,122,.65)}
+.v103-campaign-spend{font:850 17px var(--font-display);color:#f0ede5;white-space:nowrap}
+.v103-campaign-head select{height:32px;min-width:110px;font-size:9px}
+.v103-metrics{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.v103-metric{min-width:0;padding:9px 10px;border:1px solid #25282c;border-radius:11px;background:rgba(255,255,255,.018)}
+.v103-metric span{display:block;font-size:7.1px;color:#6e716b;text-transform:uppercase;letter-spacing:.075em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v103-metric b{display:block;margin-top:4px;font:800 12px var(--font-display);color:#e9e7e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v103-metric.purchase b,.v103-metric.roas b{color:#66e08d}
+.v103-metric.cart b,.v103-metric.checkout b{color:#e5c85d}
+.v103-campaign-foot{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;padding-top:8px;border-top:1px solid #22252a;color:#676a64;font-size:8px}
+.v103-campaign-foot strong{color:#969990;font-weight:700}
+.v103-empty-note{font-size:8.5px;color:#777a74;margin-top:5px}
+
+@media(max-width:1050px){.v103-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:640px){
+  .v103-campaign-head{grid-template-columns:minmax(0,1fr) auto;gap:7px;margin-bottom:9px}
+  .v103-campaign-title{grid-column:1/3}.v103-campaign-title strong{font-size:10px}
+  .v103-campaign-spend{font-size:15px}.v103-campaign-head select{min-width:105px;height:31px}
+  .v103-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+  .v103-metric{padding:8px;border-radius:9px}.v103-metric span{font-size:6.8px}.v103-metric b{font-size:11.5px}
+  .v103-campaign-foot{gap:7px;font-size:7.4px;line-height:1.35}
+}
+</style>
+<script id="v10-3-meta-ecom-script">
+/* V10.3: o financeiro continua somando TODO gasto do mês.
+   Apenas a lista visual abaixo é filtrada para campanhas ACTIVE agora. */
+carregarIntegracoesV10=async function(){
+  const [m,r,s,st]=await Promise.all([
+    sb.from('meta_ads_daily').select('data,account_id,campaign_id,campaign_name,spend,impressions,clicks,reach,link_clicks,landing_page_views,page_views,view_content,add_to_cart,initiate_checkout,purchases,purchase_value,currency,synced_at').order('data',{ascending:false}).limit(15000),
+    sb.from('meta_campaign_classification').select('campaign_id,campaign_name,tipo,status,effective_status,last_meta_sync_at,updated_at').limit(5000),
+    sb.from('shopify_traffic_daily').select('data,sessions,sessions_with_cart_additions,sessions_that_reached_checkout,sessions_that_completed_checkout,synced_at').order('data',{ascending:false}).limit(1500),
+    sb.from('integration_sync_status').select('provider,status,last_sync_at,last_success_at,last_error,records,metadata')
+  ]);
+  if(m.error||r.error||s.error||st.error){
+    integrationsSchemaV10=false;
+    console.warn('[V10.3] integração ainda não disponível',{meta:m.error,rules:r.error,shopify:s.error,status:st.error});
+    return false;
+  }
+  integrationsSchemaV10=true;
+  cache.metaAdsDaily=m.data||[];
+  cache.metaCampaignRules=r.data||[];
+  cache.shopifyTrafficDaily=s.data||[];
+  cache.integrationStatus=st.data||[];
+  return true;
+};
+
+function campanhasMesV103(ym){
+  const rules=(cache.metaCampaignRules||[]);
+  const statusDisponivel=rules.some(r=>String(r.effective_status||'').trim());
+  const activeRules=statusDisponivel?rules.filter(r=>String(r.effective_status||'').toUpperCase()==='ACTIVE'):[];
+  const map=new Map();
+
+  // Campanhas ativas entram mesmo que ainda não tenham gasto/entrega no período.
+  if(statusDisponivel){
+    activeRules.forEach(r=>map.set(String(r.campaign_id),{
+      campaign_id:String(r.campaign_id),campaign_name:r.campaign_name||String(r.campaign_id),
+      spend:0,impressions:0,clicks:0,reach:0,link_clicks:0,landing_page_views:0,page_views:0,
+      view_content:0,add_to_cart:0,initiate_checkout:0,purchases:0,purchase_value:0,effective_status:'ACTIVE'
+    }));
+  }
+
+  metaRowsV10(ym).forEach(r=>{
+    const id=String(r.campaign_id||'');if(!id)return;
+    if(statusDisponivel&&!map.has(id))return; // esconde pausadas/inativas apenas nesta lista
+    const x=map.get(id)||{
+      campaign_id:id,campaign_name:r.campaign_name||id,spend:0,impressions:0,clicks:0,reach:0,
+      link_clicks:0,landing_page_views:0,page_views:0,view_content:0,add_to_cart:0,initiate_checkout:0,
+      purchases:0,purchase_value:0,effective_status:null
+    };
+    ['spend','impressions','clicks','reach','link_clicks','landing_page_views','page_views','view_content','add_to_cart','initiate_checkout','purchases','purchase_value'].forEach(k=>x[k]+=Number(r[k]||0));
+    if(!x.campaign_name&&r.campaign_name)x.campaign_name=r.campaign_name;
+    map.set(id,x);
+  });
+
+  // Antes do primeiro sync V10.3, mantém compatibilidade mostrando o que já existia.
+  return [...map.values()].sort((a,b)=>b.spend-a.spend||b.purchases-a.purchases);
+}
+
+campanhasMesV10=campanhasMesV103;
+
+renderCampanhasV10=function(){
+  const ym=ymAnunciosV99(),rows=campanhasMesV103(ym),el=document.getElementById('v10-campaign-list'),cnt=document.getElementById('v10-campaign-count');
+  if(cnt)cnt.textContent=String(rows.length);
+  if(!el)return;
+  if(!integrationsSchemaV10){el.innerHTML='<div class="v10-empty">Rode a migração V10.3 no Supabase e sincronize novamente.</div>';return}
+  const rules=ruleMapV10();
+  const temStatus=(cache.metaCampaignRules||[]).some(r=>String(r.effective_status||'').trim());
+  if(!rows.length){
+    el.innerHTML=`<div class="v10-empty">${temStatus?'Nenhuma campanha Meta está ativa agora.':'Sincronize a Meta para identificar quais campanhas estão ativas.'}</div>`;
+    return;
+  }
+  el.innerHTML=rows.map(c=>{
+    const tipo=rules.get(c.campaign_id)?.tipo||'nao_classificado';
+    const spend=Number(c.spend||0),purchases=Number(c.purchases||0),purchaseValue=Number(c.purchase_value||0);
+    const lpv=Number(c.landing_page_views||0),atc=Number(c.add_to_cart||0),checkout=Number(c.initiate_checkout||0),links=Number(c.link_clicks||0),impressions=Number(c.impressions||0);
+    const roas=spend>0?purchaseValue/spend:0,cpa=purchases>0?spend/purchases:0,ctr=impressions>0?links/impressions*100:0;
+    return `<div class="v10-campaign-row">
+      <div class="v103-campaign-head">
+        <div class="v103-campaign-title"><strong title="${escHtml(c.campaign_name)}">${escHtml(c.campaign_name)}</strong><span class="v103-active-pill">Ativa</span></div>
+        <div class="v103-campaign-spend">${fmtVal(spend)}</div>
+        <select onchange="classificarCampanhaV10('${c.campaign_id}',this.value)">
+          <option value="nao_classificado" ${tipo==='nao_classificado'?'selected':''}>Classificar…</option>
+          <option value="vendas" ${tipo==='vendas'?'selected':''}>Vendas</option>
+          <option value="branding" ${tipo==='branding'?'selected':''}>Branding</option>
+          <option value="ignorar" ${tipo==='ignorar'?'selected':''}>Ignorar</option>
+        </select>
+      </div>
+      <div class="v103-metrics">
+        <div class="v103-metric"><span>Gasto</span><b>${fmtVal(spend)}</b></div>
+        <div class="v103-metric purchase"><span>Compras</span><b>${purchases.toLocaleString('pt-BR')}</b></div>
+        <div class="v103-metric roas"><span>ROAS Meta</span><b>${roas.toFixed(2)}x</b></div>
+        <div class="v103-metric"><span>CPA</span><b>${purchases?fmtVal(cpa):'—'}</b></div>
+        <div class="v103-metric cart"><span>Add to cart</span><b>${atc.toLocaleString('pt-BR')}</b></div>
+        <div class="v103-metric checkout"><span>Checkout</span><b>${checkout.toLocaleString('pt-BR')}</b></div>
+        <div class="v103-metric"><span>Landing page</span><b>${lpv.toLocaleString('pt-BR')}</b></div>
+        <div class="v103-metric"><span>CTR link</span><b>${ctr.toFixed(2)}%</b></div>
+      </div>
+      <div class="v103-campaign-foot">
+        <span><strong>${impressions.toLocaleString('pt-BR')}</strong> impressões</span>
+        <span><strong>${links.toLocaleString('pt-BR')}</strong> cliques no link</span>
+        <span><strong>${Number(c.page_views||0).toLocaleString('pt-BR')}</strong> page views</span>
+        <span><strong>${Number(c.view_content||0).toLocaleString('pt-BR')}</strong> view content</span>
+        <span><strong>${fmtVal(purchaseValue)}</strong> valor de compras atribuído pela Meta</span>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const p=document.querySelector('.v10-campaign-shell .section-header p');
+  if(p)p.textContent='Somente campanhas ativas agora · funil de e-commerce e classificação financeira.';
+});
 </script>
 
 </body>
