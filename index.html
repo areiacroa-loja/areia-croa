@@ -902,24 +902,66 @@ body::before{
 
   <!-- PRODUTOS -->
   <div id="panel-produtos" class="panel">
-    <div class="page-heading compact-heading">
+    <div class="page-heading compact-heading v106-products-heading">
       <div class="page-heading-copy">
-        <div class="page-eyebrow"><i class="ti ti-shirt"></i> Catálogo e custos</div>
+        <div class="page-eyebrow"><i class="ti ti-shirt"></i> Catálogo automático</div>
         <h2>Produtos</h2>
-        <p>Cadastre custo, preço e estoque para manter a margem de cada venda correta.</p>
+        <p>A Yampi é a fonte de produto, SKU, preço e estoque. O CRM cruza custo, margem e histórico financeiro.</p>
+      </div>
+      <div class="page-actions-v96">
+        <button class="btn primary" id="v106-yampi-sync-btn" onclick="sincronizarCatalogoYampiV106()"><i class="ti ti-refresh"></i>Sincronizar Yampi</button>
       </div>
     </div>
-    <p class="section-title">Cadastrar produto</p>
-    <div class="form-grid col5">
-      <div><label>Nome do produto</label><input type="text" id="prod-nome" placeholder="Ex: Vestido Floral"></div>
-      <div><label>Custo do produto (R$)</label><input type="number" id="prod-custo" placeholder="0,00" step="0.01" min="0"></div>
-      <div><label>Preço de venda (R$)</label><input type="number" id="prod-preco" placeholder="0,00" step="0.01" min="0"></div>
-      <div><label>Estoque</label><input type="number" id="prod-estoque" placeholder="0" step="1" min="0"></div>
-      <div><label>&nbsp;</label><button class="btn primary" style="width:100%" onclick="addProduto()"><i class="ti ti-plus"></i>Cadastrar</button></div>
+
+    <div class="v106-yampi-status-shell">
+      <div class="v106-yampi-status-copy">
+        <span class="v106-yampi-pill" id="v106-yampi-status"><i></i>Yampi aguardando</span>
+        <strong>Catálogo sincronizado por SKU</strong>
+        <small id="v106-yampi-last">Aguardando primeira sincronização do catálogo.</small>
+      </div>
+      <div class="v106-product-kpis">
+        <div><span>Produtos / SKUs</span><b id="v106-kpi-skus">—</b></div>
+        <div><span>Ativos</span><b id="v106-kpi-active">—</b></div>
+        <div><span>Estoque total</span><b id="v106-kpi-stock">—</b></div>
+        <div><span>Manuais</span><b id="v106-kpi-manual">—</b></div>
+      </div>
     </div>
-    <div class="divider"></div>
-    <p class="section-title">Produtos cadastrados</p>
-    <div class="lista-vendas" id="lista-produtos"></div>
+
+    <div class="toolbar-card v106-products-toolbar">
+      <div class="toolbar-group v106-product-search">
+        <label>Buscar</label>
+        <input id="v106-product-search" placeholder="Nome, SKU ou variação..." oninput="renderProdutos()">
+      </div>
+      <div class="toolbar-group">
+        <label>Status</label>
+        <select id="v106-product-status" onchange="renderProdutos()">
+          <option value="active">Ativos</option>
+          <option value="all">Todos</option>
+          <option value="inactive">Inativos</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <label>Origem</label>
+        <select id="v106-product-origin" onchange="renderProdutos()">
+          <option value="all">Yampi + manual</option>
+          <option value="yampi">Só Yampi</option>
+          <option value="manual">Só manual</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="lista-vendas v106-product-list" id="lista-produtos"></div>
+
+    <details class="v106-manual-product">
+      <summary><i class="ti ti-plus"></i> Produto manual / fora da Yampi</summary>
+      <div class="form-grid col5" style="margin-top:14px">
+        <div><label>Nome do produto</label><input type="text" id="prod-nome" placeholder="Ex: Vestido Floral"></div>
+        <div><label>Custo (R$)</label><input type="number" id="prod-custo" placeholder="0,00" step="0.01" min="0"></div>
+        <div><label>Preço (R$)</label><input type="number" id="prod-preco" placeholder="0,00" step="0.01" min="0"></div>
+        <div><label>Estoque</label><input type="number" id="prod-estoque" placeholder="0" step="1" min="0"></div>
+        <div><label>&nbsp;</label><button class="btn" style="width:100%" onclick="addProduto()"><i class="ti ti-plus"></i>Cadastrar manual</button></div>
+      </div>
+    </details>
   </div>
 
   <!-- VENDAS -->
@@ -5100,6 +5142,283 @@ document.addEventListener('DOMContentLoaded',()=>{
     finally{if(btn){btn.disabled=false;btn.classList.remove('v10-syncing');btn.innerHTML=original}}
   };
 })();
+</script>
+
+
+
+<style id="v10-6-yampi-catalog-style">
+.v106-products-heading{align-items:center}
+.v106-yampi-status-shell{display:grid;grid-template-columns:minmax(240px,.72fr) minmax(0,1.28fr);gap:10px;padding:14px;border:1px solid #292c30;border-radius:18px;background:radial-gradient(320px 130px at 0 0,rgba(213,179,71,.09),transparent 72%),linear-gradient(145deg,#17191c,#0e0f11);margin-bottom:10px}
+.v106-yampi-status-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;padding:4px 5px}
+.v106-yampi-status-copy strong{font:800 14px var(--font-display);letter-spacing:-.02em}
+.v106-yampi-status-copy small{font-size:9px;color:#6f726c;line-height:1.45}
+.v106-yampi-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid #32353a;border-radius:999px;padding:5px 8px;font:800 8px var(--font-display);text-transform:uppercase;letter-spacing:.07em;color:#878a84;background:#121416}
+.v106-yampi-pill i{width:6px;height:6px;border-radius:50%;background:#70736d}
+.v106-yampi-pill.ok{color:#69da91;border-color:rgba(72,209,122,.22);background:rgba(72,209,122,.055)}
+.v106-yampi-pill.ok i{background:#48d17a;box-shadow:0 0 9px rgba(72,209,122,.6)}
+.v106-yampi-pill.err{color:#ff777d;border-color:rgba(255,98,104,.25);background:rgba(255,98,104,.055)}
+.v106-yampi-pill.err i{background:#ff6268}
+.v106-product-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.v106-product-kpis>div{min-width:0;padding:11px 10px;border:1px solid #25282d;border-radius:12px;background:rgba(8,9,11,.38)}
+.v106-product-kpis span{display:block;font-size:7.7px;color:#696c66;text-transform:uppercase;letter-spacing:.08em}
+.v106-product-kpis b{display:block;margin-top:5px;font:800 14px var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v106-products-toolbar{display:grid!important;grid-template-columns:minmax(220px,1fr) 150px 170px;align-items:end}
+.v106-product-search input{width:100%}
+.v106-product-list{gap:7px}
+.v106-product-card{display:grid;grid-template-columns:54px minmax(0,1.25fr) minmax(330px,1fr);gap:12px;align-items:center;padding:11px 12px;border:1px solid #26292d;border-radius:14px;background:linear-gradient(145deg,#151719,#0e0f11);cursor:pointer;transition:border-color .15s}
+.v106-product-card:hover{border-color:#363a40}
+.v106-product-img{width:54px;height:62px;border-radius:10px;border:1px solid #2a2d31;background:#0d0f10;overflow:hidden;display:grid;place-items:center;color:#5f625d}
+.v106-product-img img{width:100%;height:100%;object-fit:cover;display:block}
+.v106-product-info{min-width:0}
+.v106-product-info h3{font:800 11px/1.3 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v106-product-sub{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:5px}
+.v106-product-sku{font:750 8.2px var(--font-display);color:#9d9f99}
+.v106-prod-badge{display:inline-flex;align-items:center;padding:3px 6px;border-radius:999px;font:800 7px var(--font-display);text-transform:uppercase;letter-spacing:.06em;border:1px solid #2b2e32;color:#777a75}
+.v106-prod-badge.yampi{color:#e0c15a;border-color:rgba(213,179,71,.24);background:rgba(213,179,71,.055)}
+.v106-prod-badge.active{color:#67d68d;border-color:rgba(72,209,122,.20);background:rgba(72,209,122,.05)}
+.v106-prod-badge.inactive{color:#ff777d;border-color:rgba(255,98,104,.20);background:rgba(255,98,104,.05)}
+.v106-product-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.v106-product-metrics>div{min-width:0;padding:8px 9px;border-radius:10px;background:#101214;border:1px solid #22252a}
+.v106-product-metrics span{display:block;font-size:6.8px;text-transform:uppercase;letter-spacing:.07em;color:#636660}
+.v106-product-metrics b{display:block;margin-top:3px;font:800 10.5px var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v106-product-metrics .stock-low b{color:#ff7c82}.v106-product-metrics .margin-ok b{color:#6cdb92}
+.v106-manual-product{margin-top:12px;border:1px solid #24272b;border-radius:13px;background:#101214;overflow:hidden}
+.v106-manual-product summary{list-style:none;cursor:pointer;padding:11px 13px;color:#777a74;font:750 9px var(--font-display);display:flex;align-items:center;gap:6px}
+.v106-manual-product summary::-webkit-details-marker{display:none}
+.v106-manual-product[open]{padding:0 13px 13px}.v106-manual-product[open] summary{margin:0 -13px 0}
+@media(max-width:900px){
+  .v106-yampi-status-shell{grid-template-columns:1fr}
+  .v106-products-toolbar{grid-template-columns:1fr 1fr!important}
+  .v106-product-search{grid-column:1/-1}
+  .v106-product-card{grid-template-columns:46px minmax(0,1fr);gap:9px}
+  .v106-product-img{width:46px;height:54px}
+  .v106-product-metrics{grid-column:1/-1}
+}
+@media(max-width:560px){
+  .v106-products-heading{align-items:stretch}
+  .v106-products-heading .page-actions-v96{width:100%}.v106-products-heading .page-actions-v96 .btn{width:100%;justify-content:center}
+  .v106-yampi-status-shell{padding:10px;border-radius:14px}
+  .v106-product-kpis{grid-template-columns:1fr 1fr}
+  .v106-product-kpis>div{padding:8px}.v106-product-kpis b{font-size:12px}
+  .v106-products-toolbar{grid-template-columns:1fr 1fr!important;padding:8px!important}
+  .v106-product-card{padding:9px;border-radius:11px}
+  .v106-product-info h3{font-size:10px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .v106-product-metrics{grid-template-columns:1fr 1fr;gap:5px}
+  .v106-product-metrics>div{padding:7px 8px}.v106-product-metrics b{font-size:10px}
+  .v106-product-img{width:42px;height:50px}
+}
+</style>
+
+
+<script id="v10-6-yampi-catalog-js">
+cache.yampiCatalogStatus = cache.yampiCatalogStatus || null;
+
+function fmtDateTimeV106(v){
+  if(!v)return'Nunca';
+  const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v);
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+
+async function carregarStatusCatalogoYampiV106(){
+  const r=await sb.from('integration_sync_status')
+    .select('provider,status,last_sync_at,last_success_at,last_error,records,metadata')
+    .eq('provider','yampi_catalog')
+    .maybeSingle();
+  if(!r.error)cache.yampiCatalogStatus=r.data||null;
+  return cache.yampiCatalogStatus;
+}
+
+carregarProdutosV95=async function(force=false){
+  const [r]=await Promise.all([
+    sb.from('produtos')
+      .select('id,nome,custo,preco,estoque,yampi_product_id,yampi_sku_id,sku,ativo,origem_catalogo,imagem_url,yampi_variacoes,yampi_synced_at')
+      .order('nome')
+      .limit(10000),
+    carregarStatusCatalogoYampiV106()
+  ]);
+  if(r.error)throw r.error;
+  cache.produtos=r.data||[];
+  try{perfV95.loaded.add('produtos')}catch(_){}
+  perfSaveV95();
+  return cache.produtos;
+};
+
+function produtosFiltradosV106(){
+  const q=(document.getElementById('v106-product-search')?.value||'').trim().toLowerCase();
+  const status=document.getElementById('v106-product-status')?.value||'active';
+  const origin=document.getElementById('v106-product-origin')?.value||'all';
+  return (cache.produtos||[]).filter(p=>{
+    const active=p.ativo!==false;
+    if(status==='active'&&!active)return false;
+    if(status==='inactive'&&active)return false;
+    const isYampi=p.origem_catalogo==='yampi'||!!p.yampi_sku_id;
+    if(origin==='yampi'&&!isYampi)return false;
+    if(origin==='manual'&&isYampi)return false;
+    if(q){
+      const hay=`${p.nome||''} ${p.sku||''} ${JSON.stringify(p.yampi_variacoes||[])}`.toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    const aa=a.ativo!==false?0:1,bb=b.ativo!==false?0:1;
+    if(aa!==bb)return aa-bb;
+    return String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR');
+  });
+}
+
+function atualizarResumoProdutosV106(){
+  const all=cache.produtos||[];
+  const yampi=all.filter(p=>p.origem_catalogo==='yampi'||p.yampi_sku_id);
+  const active=yampi.filter(p=>p.ativo!==false);
+  const stock=active.reduce((s,p)=>s+Number(p.estoque||0),0);
+  const manual=all.filter(p=>!(p.origem_catalogo==='yampi'||p.yampi_sku_id)).length;
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v};
+  set('v106-kpi-skus',yampi.length.toLocaleString('pt-BR'));
+  set('v106-kpi-active',active.length.toLocaleString('pt-BR'));
+  set('v106-kpi-stock',stock.toLocaleString('pt-BR'));
+  set('v106-kpi-manual',manual.toLocaleString('pt-BR'));
+
+  const st=cache.yampiCatalogStatus;
+  const pill=document.getElementById('v106-yampi-status');
+  const last=document.getElementById('v106-yampi-last');
+  if(pill){
+    pill.className='v106-yampi-pill '+(st?.status==='success'?'ok':st?.status==='error'?'err':'');
+    pill.innerHTML=`<i></i>${st?.status==='success'?'Yampi conectado':st?.status==='error'?'Erro Yampi':'Yampi aguardando'}`;
+    pill.title=st?.last_error||'';
+  }
+  if(last){
+    if(st?.status==='error')last.textContent=`Última tentativa ${fmtDateTimeV106(st.last_sync_at)} · ${st.last_error||'erro na sincronização'}`;
+    else if(st?.last_success_at){
+      const m=st.metadata||{};
+      last.textContent=`Última sincronização ${fmtDateTimeV106(st.last_success_at)} · ${Number(m.products||0)} produtos · ${Number(m.skus||st.records||0)} SKUs`;
+    }else last.textContent='Aguardando primeira sincronização do catálogo.';
+  }
+}
+
+renderProdutos=function(){
+  const el=document.getElementById('lista-produtos');if(!el)return;
+  atualizarResumoProdutosV106();
+  const list=produtosFiltradosV106();
+  if(!list.length){
+    el.innerHTML='<div class="v10-empty">Nenhum produto encontrado neste filtro.</div>';
+    return;
+  }
+  el.innerHTML=list.map(p=>{
+    const isYampi=p.origem_catalogo==='yampi'||!!p.yampi_sku_id;
+    const active=p.ativo!==false;
+    const price=Number(p.preco||0),cost=Number(p.custo||0),stock=Number(p.estoque||0);
+    const margin=price>0?(price-cost)/price*100:0;
+    const image=p.imagem_url?`<img src="${escHtml(p.imagem_url)}" alt="" loading="lazy" onerror="this.remove()">`:'<i class="ti ti-shirt"></i>';
+    return `<div class="v106-product-card" onclick="abrirModalProduto('${p.id}')">
+      <div class="v106-product-img">${image}</div>
+      <div class="v106-product-info">
+        <h3>${escHtml(p.nome||'Produto')}</h3>
+        <div class="v106-product-sub">
+          ${p.sku?`<span class="v106-product-sku">${escHtml(p.sku)}</span>`:''}
+          <span class="v106-prod-badge ${isYampi?'yampi':''}">${isYampi?'Yampi':'Manual'}</span>
+          <span class="v106-prod-badge ${active?'active':'inactive'}">${active?'Ativo':'Inativo'}</span>
+        </div>
+      </div>
+      <div class="v106-product-metrics">
+        <div><span>Custo</span><b>${cost>0?fmtVal(cost):'—'}</b></div>
+        <div><span>Preço</span><b>${price>0?fmtVal(price):'—'}</b></div>
+        <div class="${margin>0?'margin-ok':''}"><span>Margem</span><b>${cost>0&&price>0?margin.toFixed(1)+'%':'—'}</b></div>
+        <div class="${stock<=1?'stock-low':''}"><span>Estoque</span><b>${stock.toLocaleString('pt-BR')}</b></div>
+      </div>
+    </div>`;
+  }).join('');
+};
+
+salvarEdicaoProduto=async function(id){
+  const p=(cache.produtos||[]).find(x=>sameIdV9?sameIdV9(x.id,id):String(x.id)===String(id));if(!p)return;
+  const isYampi=p.origem_catalogo==='yampi'||!!p.yampi_sku_id;
+  if(isYampi){
+    const custo=Math.max(0,parseFloat(document.getElementById('modal-prod-custo')?.value)||0);
+    await checarErro(await sb.from('produtos').update({custo}).eq('id',id),'Erro ao salvar custo');
+  }else{
+    const nome=document.getElementById('modal-prod-nome')?.value?.trim(),custo=parseFloat(document.getElementById('modal-prod-custo')?.value)||0,preco=parseFloat(document.getElementById('modal-prod-preco')?.value)||0,estoque=parseFloat(document.getElementById('modal-prod-estoque')?.value)||0;
+    if(!nome||preco<=0){alert('Nome e preço são obrigatórios.');return}
+    await checarErro(await sb.from('produtos').update({nome,custo,preco,estoque}).eq('id',id),'Erro ao salvar produto');
+  }
+  fecharModalItem();await carregarProdutosV95(true);renderProdutos();populateProdutoSelect();
+};
+
+abrirModalProduto=function(id){
+  const p=(cache.produtos||[]).find(x=>sameIdV9?sameIdV9(x.id,id):String(x.id)===String(id));if(!p)return;
+  const isYampi=p.origem_catalogo==='yampi'||!!p.yampi_sku_id;
+  const disabled=isYampi?'disabled':'';
+  document.getElementById('modal-item-conteudo').innerHTML=`
+    <button class="modal-close" onclick="fecharModalItem()">&times;</button>
+    <div class="modal-header"><div><div class="modal-title">${escHtml(p.nome||'Produto')}</div><div class="modal-subtitle">${isYampi?'Sincronizado automaticamente da Yampi'+(p.sku?' · SKU '+escHtml(p.sku):''):'Produto cadastrado manualmente'}</div></div></div>
+    <div class="form-grid col2">
+      <div style="grid-column:1/-1"><label>Nome</label><input id="modal-prod-nome" value="${escHtml(p.nome||'')}" ${disabled}></div>
+      <div><label>Custo (R$)</label><input type="number" id="modal-prod-custo" value="${Number(p.custo||0)}" step="0.01" min="0"></div>
+      <div><label>Preço (R$)</label><input type="number" id="modal-prod-preco" value="${Number(p.preco||0)}" step="0.01" min="0" ${disabled}></div>
+      <div><label>Estoque</label><input type="number" id="modal-prod-estoque" value="${Number(p.estoque||0)}" step="1" min="0" ${disabled}></div>
+      <div><label>Origem</label><input value="${isYampi?'Yampi automática':'Manual'}" disabled></div>
+      ${p.sku?`<div><label>SKU</label><input value="${escHtml(p.sku)}" disabled></div>`:''}
+      ${p.yampi_product_id?`<div><label>ID produto Yampi</label><input value="${p.yampi_product_id}" disabled></div>`:''}
+      ${p.yampi_sku_id?`<div><label>ID SKU Yampi</label><input value="${p.yampi_sku_id}" disabled></div>`:''}
+    </div>
+    <div class="form-note">${isYampi?'Nome, preço e estoque vêm da Yampi e são atualizados automaticamente. O custo pode ser preenchido aqui quando não existir custo cadastrado na Yampi; se a Yampi passar a informar custo, ela volta a ser a fonte.':'Produto manual não é alterado pela sincronização Yampi.'}</div>
+    <div class="modal-actions">
+      ${isYampi?'':`<button class="btn danger" onclick="fecharModalItem();deletarProduto('${p.id}')"><i class="ti ti-trash"></i>Excluir</button>`}
+      <button class="btn primary" onclick="salvarEdicaoProduto('${p.id}')"><i class="ti ti-check"></i>${isYampi?'Salvar custo':'Salvar alterações'}</button>
+    </div>`;
+  document.getElementById('modal-item').classList.remove('hidden');document.body.classList.add('modal-open');
+};
+
+populateProdutoSelect=function(){
+  const el=document.getElementById('v-produto');if(!el)return;
+  const rows=(cache.produtos||[]).filter(p=>p.ativo!==false);
+  el.innerHTML='<option value="">— Selecione —</option>'+rows.map(p=>`<option value="${p.id}">${escHtml(p.nome)}${p.sku?' · '+escHtml(p.sku):''}</option>`).join('');
+};
+
+renderItensNovaVendaV9=function(){
+  const wrap=document.getElementById('multi-items-v9');if(!wrap)return;
+  const rows=(cache.produtos||[]).filter(p=>p.ativo!==false);
+  const opts='<option value="">— Produto —</option>'+rows.map(p=>`<option value="${p.id}">${escHtml(p.nome)}${p.sku?' · '+escHtml(p.sku):''}</option>`).join('');
+  wrap.innerHTML=window.__novaVendaItensV9.map((it,idx)=>`<div class="multi-item"><div><label>Produto ${idx+1}</label><select onchange="syncItemNovaVendaV9('${it.key}','produto_id',this.value)">${opts.replace(`value="${it.produto_id}"`,`value="${it.produto_id}" selected`)}</select></div><div><label>Qtd.</label><input type="number" min="1" step="1" value="${it.qtd}" onchange="syncItemNovaVendaV9('${it.key}','qtd',this.value)"></div><div><label>Valor total (R$)</label><input type="number" min="0" step="0.01" value="${Number(it.receita||0).toFixed(2)}" onchange="syncItemNovaVendaV9('${it.key}','receita',this.value)"></div><div><label>Custo total (R$)</label><input type="number" min="0" step="0.01" value="${Number(it.custo||0).toFixed(2)}" onchange="syncItemNovaVendaV9('${it.key}','custo',this.value)"></div><button class="multi-item-remove" onclick="removerItemNovaVendaV9('${it.key}')" title="Remover item"><i class="ti ti-x"></i></button></div>`).join('');
+  atualizarPreviewV9();
+};
+
+async function sincronizarCatalogoYampiV106(){
+  const btn=document.getElementById('v106-yampi-sync-btn');
+  const original=btn?.innerHTML||'Sincronizar Yampi';
+  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i>Sincronizando catálogo…'}
+  try{
+    const {data:{session},error:se}=await sb.auth.getSession();
+    if(se)throw se;if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
+    const r=await sb.functions.invoke('yampi-catalog-sync',{
+      body:{},
+      headers:{Authorization:`Bearer ${session.access_token}`}
+    });
+    if(r.error){
+      let detail=r.error.message||'Falha na função';
+      try{
+        if(r.error.context?.clone){const t=await r.error.context.clone().text();if(t){try{const j=JSON.parse(t);detail=j?.error||j?.message||t}catch{detail=t}}}
+      }catch(_){}
+      throw new Error(detail);
+    }
+    if(r.data?.ok===false)throw new Error(r.data?.error||'A Yampi recusou a sincronização.');
+    await carregarProdutosV95(true);
+    renderProdutos();populateProdutoSelect();perfSaveV95();
+    const st=cache.yampiCatalogStatus;
+    const count=Number(st?.metadata?.skus||st?.records||r.data?.skus||0);
+    alert(`Catálogo Yampi sincronizado: ${count} SKU(s).`);
+  }catch(e){
+    console.error('[V10.6] catálogo Yampi',e);
+    await carregarStatusCatalogoYampiV106();
+    atualizarResumoProdutosV106();
+    alert('Falha ao sincronizar catálogo: '+(e?.message||e));
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML=original}
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  atualizarResumoProdutosV106();
+});
 </script>
 
 </body>
