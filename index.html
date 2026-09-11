@@ -963,50 +963,69 @@ body::before{
     <div class="page-heading">
       <div class="page-heading-copy">
         <div class="page-eyebrow"><i class="ti ti-speakerphone"></i> Performance de mídia</div>
-        <h2>Investimentos em anúncios</h2>
-        <p>Abra uma verba, acompanhe o ciclo e feche com gasto real, sessões, carrinhos, compras e faturamento atribuído. O financeiro usa apenas o gasto efetivamente realizado.</p>
+        <h2>Mídia & aquisição</h2>
+        <p>Gasto real vem da Meta, sessões vêm da Shopify e vendas/receita vêm da Yampi/CRM. Aportes ficam separados como controle de caixa.</p>
       </div>
       <div class="page-actions-v96">
-        <button class="btn" onclick="abrirNovoAporteV98()"><i class="ti ti-cash-banknote"></i>Registrar aporte</button>
-        <button class="btn primary" onclick="abrirModalNovoInvestimento()"><i class="ti ti-plus"></i>Novo investimento</button>
+        <button class="btn" id="v10-sync-btn" onclick="sincronizarIntegracoesV10()"><i class="ti ti-refresh"></i>Sincronizar agora</button>
+        <button class="btn primary" id="v99-btn-fechar-mes" onclick="acaoFechamentoMesV99()"><i class="ti ti-lock"></i>Fechar mês</button>
       </div>
     </div>
-
-    <div id="ads-schema-alert" class="notice hidden"></div>
 
     <div class="toolbar-card">
       <div class="toolbar-group">
-        <span class="toolbar-label">Período</span>
+        <span class="toolbar-label">Mês</span>
         <select id="filter-mes-anuncios" onchange="renderAnuncios()" style="width:170px"></select>
       </div>
-      <div class="toolbar-group">
-        <span class="period-pill"><i class="ti ti-circle-filled" style="font-size:7px"></i> Vendas</span>
-        <span class="period-pill" style="background:var(--purple-soft);color:var(--purple)"><i class="ti ti-palette"></i> Branding</span>
+      <div class="toolbar-group" id="v10-connection-status"></div>
+    </div>
+
+    <div class="section-shell v99-month-shell">
+      <div class="section-header">
+        <div>
+          <h3 id="v99-month-title">Resumo do mês</h3>
+          <p id="v99-month-subtitle">Visão final do investimento e do retorno do período.</p>
+        </div>
+        <span class="section-count" id="v99-month-status"></span>
       </div>
+      <div class="v99-month-grid" id="v99-month-grid"></div>
+      <div class="v99-close-note" id="v99-close-note"></div>
     </div>
 
 
-    <div class="section-shell v98-aportes-shell" id="v98-aportes-shell">
-      <div class="section-header v98-aportes-head">
+    <div class="section-shell v10-auto-shell">
+      <div class="section-header">
         <div>
-          <h3>Aportes de investimento</h3>
-          <p>Cada depósito de mídia fica registrado separadamente. O total do mês é a soma destes lançamentos, e cada aporte pode ser editado ou excluído.</p>
+          <h3>Dados automáticos</h3>
+          <p>Meta Ads + Shopify + Yampi/CRM, cruzados pelo mês selecionado.</p>
+        </div>
+        <span class="section-count" id="v10-last-sync">Aguardando conexão</span>
+      </div>
+      <div class="v10-source-grid" id="v10-source-grid"></div>
+      <div class="v10-classification-warning" id="v10-classification-warning"></div>
+    </div>
+
+    <div class="section-shell v10-campaign-shell">
+      <div class="section-header">
+        <div>
+          <h3>Campanhas Meta</h3>
+          <p>Classifique cada campanha uma única vez. Branding entra no custo do mês, mas fica fora do ROAS de vendas.</p>
+        </div>
+        <span class="section-count" id="v10-campaign-count">0</span>
+      </div>
+      <div class="v10-campaign-list" id="v10-campaign-list"></div>
+    </div>
+
+    <div class="section-shell v99-ledger-shell">
+      <div class="section-header">
+        <div>
+          <h3>Aportes / caixa</h3>
+          <p>Quanto você colocou de saldo na mídia. Quando a Meta está conectada, estes aportes não são usados como gasto no lucro: o financeiro usa o gasto real da Meta.</p>
         </div>
         <button class="btn primary sm" onclick="abrirNovoAporteV98()"><i class="ti ti-plus"></i>Novo aporte</button>
       </div>
-      <div class="v98-aporte-kpis" id="v98-aporte-kpis"></div>
-      <div class="v98-aporte-list" id="v98-aporte-list"></div>
-    </div>
-
-    <div class="cards" id="anuncio-cards"></div>
-
-    <div class="section-shell traffic-overview-shell">
-      <div class="section-header">
-        <div><h3>Funil do tráfego pago</h3><p>Desempenho consolidado dos investimentos de vendas já encerrados neste período.</p></div>
-        <span class="section-count"><i class="ti ti-chart-funnel"></i> Vendas</span>
-      </div>
-      <div class="traffic-summary-cards" id="trafego-cards"></div>
-      <div class="traffic-funnel" id="trafego-funil"></div>
+      <div class="v99-ledger-summary" id="v99-ledger-summary"></div>
+      <div class="v99-ledger-list" id="v99-ledger-list"></div>
     </div>
 
     <div class="section-shell abandoned-shell">
@@ -1022,21 +1041,15 @@ body::before{
       <div class="abandon-list" id="lista-carrinhos-abandonados"></div>
     </div>
 
-    <div class="section-shell">
-      <div class="section-header">
-        <div><h3>Investimentos em andamento</h3><p>Verbas ainda não encerradas e que não entram como gasto real na margem.</p></div>
-        <span class="section-count" id="count-anuncios-abertos">0</span>
-      </div>
-      <div class="ad-list" id="lista-anuncios-abertos"></div>
-    </div>
-
-    <div class="section-shell">
-      <div class="section-header">
-        <div><h3>Histórico de investimentos</h3><p>Ciclos encerrados com resultado de tráfego e retorno.</p></div>
-        <span class="section-count" id="count-anuncios-fechados">0</span>
-      </div>
-      <div class="ad-list" id="lista-anuncios-fechados"></div>
-    </div>
+    <!-- placeholders legados mantidos invisíveis para compatibilidade -->
+    <div id="ads-schema-alert" class="hidden"></div>
+    <div id="anuncio-cards" class="hidden"></div>
+    <div id="trafego-cards" class="hidden"></div>
+    <div id="trafego-funil" class="hidden"></div>
+    <span id="count-anuncios-abertos" class="hidden"></span>
+    <span id="count-anuncios-fechados" class="hidden"></span>
+    <div id="lista-anuncios-abertos" class="hidden"></div>
+    <div id="lista-anuncios-fechados" class="hidden"></div>
   </div>
 
   <!-- METAS -->
@@ -3674,6 +3687,782 @@ perfLoadV95=function(){
 document.addEventListener('DOMContentLoaded',()=>{
   const p=document.querySelector('#panel-anuncios .page-heading-copy p');
   if(p)p.textContent='Planeje campanhas e registre cada aporte de mídia separadamente. O financeiro usa a soma real dos depósitos do período.';
+});
+</script>
+
+
+<style id="v9-9-fechamento-style">
+/* ═══════════════════════════════════════════════════════════════
+   V9.9 · INVESTIMENTOS SIMPLES + FECHAMENTO MENSAL
+   ═══════════════════════════════════════════════════════════════ */
+.v99-month-shell{position:relative;overflow:hidden}
+.v99-month-shell:before{content:"";position:absolute;width:430px;height:260px;right:-180px;top:-160px;background:radial-gradient(circle,rgba(212,175,55,.11),transparent 68%);pointer-events:none}
+.v99-month-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:13px;position:relative;z-index:1}
+.v99-metric{min-width:0;padding:15px;border:1px solid #25272a;border-radius:15px;background:linear-gradient(145deg,#151618,#101113)}
+.v99-metric.sales{border-color:rgba(212,175,55,.23);background:linear-gradient(145deg,rgba(212,175,55,.10),rgba(212,175,55,.018))}
+.v99-metric.branding{border-color:rgba(154,124,255,.22);background:linear-gradient(145deg,rgba(126,91,220,.10),rgba(126,91,220,.018))}
+.v99-metric.success{border-color:rgba(46,204,113,.18);background:linear-gradient(145deg,rgba(46,204,113,.07),rgba(46,204,113,.012))}
+.v99-metric span{display:block;font:750 8.5px var(--font-display);text-transform:uppercase;letter-spacing:.075em;color:#72756f;margin-bottom:6px}
+.v99-metric strong{display:block;font:850 19px/1.05 var(--font-display);letter-spacing:-.03em;color:#eceae3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v99-metric.sales strong{color:#efd05a}.v99-metric.branding strong{color:#bca7ff}.v99-metric.success strong{color:#6ddb97}
+.v99-metric small{display:block;margin-top:6px;color:#666963;font-size:8.8px;line-height:1.35}
+.v99-close-note{margin-top:10px;padding:11px 13px;border:1px solid #25272a;border-radius:13px;background:#101113;color:#7c7f79;font-size:9.5px;display:flex;gap:9px;align-items:flex-start}
+.v99-close-note.closed{border-color:rgba(46,204,113,.17);background:rgba(46,204,113,.035);color:#8ab99a}
+.v99-close-note i{margin-top:1px}
+.v99-status-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,179,71,.16);background:rgba(255,179,71,.055);color:#d5aa53;font:750 8.5px var(--font-display);letter-spacing:.04em;text-transform:uppercase}
+.v99-status-pill.closed{border-color:rgba(46,204,113,.18);background:rgba(46,204,113,.055);color:#70d894}
+.v99-status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}
+.v99-ledger-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.v99-ledger-total{padding:12px 14px;border:1px solid #25272a;border-radius:13px;background:#111214}
+.v99-ledger-total span{display:block;color:#6f726c;font:700 8px var(--font-display);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.v99-ledger-total strong{font:800 15px var(--font-display);color:#e5e4df}
+.v99-ledger-total.sales strong{color:#efd05a}.v99-ledger-total.branding strong{color:#baa4ff}
+.v99-ledger-list{display:grid;gap:7px}
+.v99-ledger-group{margin-top:9px}
+.v99-group-title{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 7px;color:#777a74;font:800 8.5px var(--font-display);text-transform:uppercase;letter-spacing:.09em}
+.v99-group-title b{color:#aaa}
+.v99-ledger-row{display:grid;grid-template-columns:125px minmax(0,1fr) auto auto;gap:13px;align-items:center;padding:12px 13px;border:1px solid #24262a;border-radius:13px;background:linear-gradient(145deg,#151618,#101113)}
+.v99-ledger-row:hover{border-color:#34373b}
+.v99-ledger-row.branding{border-left:2px solid rgba(162,132,255,.45)}
+.v99-ledger-row.sales{border-left:2px solid rgba(230,196,75,.45)}
+.v99-ledger-date{font:750 10px var(--font-display);color:#9b9e98}
+.v99-ledger-info{min-width:0}
+.v99-ledger-info strong{display:flex;align-items:center;gap:6px;font:800 11px var(--font-display);color:#e4e3de}
+.v99-ledger-info small{display:block;margin-top:4px;color:#6f726c;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v99-ledger-value{font:850 15px var(--font-display);color:#efd05a;white-space:nowrap}
+.v99-ledger-row.branding .v99-ledger-value{color:#bca7ff}
+.v99-ledger-actions{display:flex;gap:5px}
+.v99-empty{padding:19px;border:1px dashed #292b2f;border-radius:14px;text-align:center;color:#747771;font-size:10px}
+.v99-close-preview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}
+.v99-close-preview>div{padding:11px;border:1px solid #26282b;border-radius:11px;background:#111214}
+.v99-close-preview span{display:block;font-size:8px;color:#6e716b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.v99-close-preview b{font:800 13px var(--font-display);color:#e4e3de}
+@media(max-width:900px){.v99-month-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){
+  .v99-ledger-summary{grid-template-columns:1fr}
+  .v99-ledger-row{grid-template-columns:1fr auto}
+  .v99-ledger-date{grid-column:1}.v99-ledger-info{grid-column:1}.v99-ledger-value{grid-column:2;grid-row:1/3}.v99-ledger-actions{grid-column:1/3}
+  .v99-close-preview{grid-template-columns:1fr 1fr}
+}
+@media(max-width:430px){.v99-month-grid{grid-template-columns:1fr 1fr}.v99-metric{padding:12px}.v99-metric strong{font-size:16px}}
+</style>
+
+<script id="v9-9-fechamento">
+/* ═══════════════════════════════════════════════════════════════
+   V9.9 · Um modelo só:
+   - aporte = dinheiro realmente depositado
+   - Vendas e Branding separados
+   - ambos entram no custo financeiro
+   - fechamento é mensal, não por campanha
+   ═══════════════════════════════════════════════════════════════ */
+if(!Array.isArray(cache.fechamentosInvestimento)) cache.fechamentosInvestimento=[];
+let fechamentoMesSchemaV99=true;
+
+function ymAnunciosV99(){
+  return document.getElementById('filter-mes-anuncios')?.value || hoje().slice(0,7);
+}
+function fechamentoV99(ym){
+  return (cache.fechamentosInvestimento||[]).find(x=>x.mes===ym)||null;
+}
+function mesFechadoV99(ym){
+  return fechamentoV99(ym)?.status==='fechado';
+}
+function aportesTipoV99(ym,tipo){
+  return (cache.aportes||[]).filter(a=>a?.data&&getMes(a.data)===ym&&a.tipo===tipo);
+}
+function valorAportesV99(ym,tipo=''){
+  return (cache.aportes||[]).filter(a=>a?.data&&getMes(a.data)===ym&&(!tipo||a.tipo===tipo)).reduce((s,a)=>s+Number(a.valor||0),0);
+}
+function pedidosTrafegoV99(ym){
+  return pedidosBaseV9().filter(p=>p?.data&&getMes(p.data)===ym&&(p.via_trafego===true||p.via_trafego==='true'));
+}
+function resumoMesInvestimentoV99(ym){
+  const vendas=valorAportesV99(ym,'vendas');
+  const branding=valorAportesV99(ym,'branding');
+  const total=vendas+branding;
+  const pedidos=pedidosTrafegoV99(ym);
+  const receita=pedidos.reduce((s,p)=>s+Number(p.receita||0),0);
+  const compras=pedidos.length;
+  const f=fechamentoV99(ym);
+  const sessoes=Number(f?.sessoes||0);
+  return {
+    ym,vendas,branding,total,pedidos,receita,compras,sessoes,
+    roas:vendas>0?receita/vendas:0,
+    cpa:compras>0?vendas/compras:0,
+    conversao:sessoes>0?compras/sessoes*100:0,
+    custoSessao:sessoes>0?vendas/sessoes:0,
+    fechado:f?.status==='fechado',
+    fechamento:f
+  };
+}
+
+async function carregarFechamentosV99(){
+  const r=await sb.from('investimento_fechamentos_mensais')
+    .select('mes,status,sessoes,observacoes,closed_at,created_at,updated_at')
+    .order('mes',{ascending:false});
+  if(r.error){
+    fechamentoMesSchemaV99=false;
+    console.warn('[V9.9] fechamento mensal indisponível',r.error);
+    return false;
+  }
+  fechamentoMesSchemaV99=true;
+  cache.fechamentosInvestimento=r.data||[];
+  return true;
+}
+
+function statusPillV99(d){
+  return `<span class="v99-status-pill ${d.fechado?'closed':''}"><i class="v99-status-dot"></i>${d.fechado?'Mês fechado':'Mês aberto'}</span>`;
+}
+
+function renderResumoMesV99(){
+  const ym=ymAnunciosV99(),d=resumoMesInvestimentoV99(ym);
+  const title=document.getElementById('v99-month-title');
+  const sub=document.getElementById('v99-month-subtitle');
+  const status=document.getElementById('v99-month-status');
+  const wrap=document.getElementById('v99-status-wrap');
+  const grid=document.getElementById('v99-month-grid');
+  const note=document.getElementById('v99-close-note');
+  const btn=document.getElementById('v99-btn-fechar-mes');
+  if(title)title.textContent=`Fechamento · ${mesLabel(ym)}`;
+  if(sub)sub.textContent=d.fechado?'Este mês está fechado. Os números abaixo mostram o resultado consolidado.':'Acompanhe o mês em andamento e feche quando não houver mais movimentações.';
+  if(status)status.innerHTML=statusPillV99(d);
+  if(wrap)wrap.innerHTML=`<span class="period-pill"><i class="ti ti-chart-bar"></i> Vendas ${fmtVal(d.vendas)}</span><span class="period-pill" style="background:var(--purple-soft);color:var(--purple)"><i class="ti ti-palette"></i> Branding ${fmtVal(d.branding)}</span>`;
+  if(btn){
+    btn.innerHTML=d.fechado?'<i class="ti ti-lock-open"></i>Reabrir mês':'<i class="ti ti-lock"></i>Fechar mês';
+    btn.classList.toggle('success',d.fechado);
+  }
+  if(!grid)return;
+  grid.innerHTML=`
+    <div class="v99-metric"><span>Investimento total</span><strong>${fmtVal(d.total)}</strong><small>Vendas + Branding · custo do mês</small></div>
+    <div class="v99-metric sales"><span>Investimento em vendas</span><strong>${fmtVal(d.vendas)}</strong><small>entra no cálculo de ROAS e CPA</small></div>
+    <div class="v99-metric branding"><span>Branding</span><strong>${fmtVal(d.branding)}</strong><small>entra no custo, mas não no ROAS</small></div>
+    <div class="v99-metric success"><span>Receita via tráfego</span><strong>${fmtVal(d.receita)}</strong><small>${d.compras} ${d.compras===1?'pedido':'pedidos'} atribuídos</small></div>
+    <div class="v99-metric"><span>ROAS vendas</span><strong>${d.roas.toFixed(2)}x</strong><small>receita atribuída ÷ mídia de vendas</small></div>
+    <div class="v99-metric"><span>CPA</span><strong>${fmtVal(d.cpa)}</strong><small>mídia de vendas ÷ compras</small></div>
+    <div class="v99-metric"><span>Sessões</span><strong>${d.sessoes?d.sessoes.toLocaleString('pt-BR'):'—'}</strong><small>${d.fechado?'registradas no fechamento':'informadas ao fechar o mês'}</small></div>
+    <div class="v99-metric"><span>Conversão</span><strong>${d.sessoes?d.conversao.toFixed(2)+'%':'—'}</strong><small>${d.sessoes?fmtVal(d.custoSessao)+' por sessão':'depende das sessões'}</small></div>`;
+  if(note){
+    note.className='v99-close-note'+(d.fechado?' closed':'');
+    note.innerHTML=d.fechado
+      ? `<i class="ti ti-circle-check"></i><div><strong>${mesLabel(ym)} fechado${d.fechamento?.closed_at?' em '+fmtData(String(d.fechamento.closed_at).slice(0,10)):''}.</strong>${d.fechamento?.observacoes?` ${escHtml(d.fechamento.observacoes)}`:''} Se precisar corrigir lançamentos, você pode editar os aportes e depois reabrir/fechar novamente.</div>`
+      : `<i class="ti ti-info-circle"></i><div><strong>Mês em andamento.</strong> Registre cada depósito em “Novo aporte”. Quando o mês terminar, clique em “Fechar mês” para registrar as sessões e consolidar o resultado.</div>`;
+  }
+}
+
+function renderLedgerV99(){
+  const ym=ymAnunciosV99();
+  const all=(cache.aportes||[]).filter(a=>a?.data&&getMes(a.data)===ym).sort((a,b)=>String(b.data||'').localeCompare(String(a.data||''))||String(b.created_at||'').localeCompare(String(a.created_at||'')));
+  const vendas=all.filter(a=>a.tipo!=='branding'),branding=all.filter(a=>a.tipo==='branding');
+  const summary=document.getElementById('v99-ledger-summary'),list=document.getElementById('v99-ledger-list');
+  if(summary)summary.innerHTML=`
+    <div class="v99-ledger-total"><span>Total do mês</span><strong>${fmtVal(valorAportesV99(ym))}</strong></div>
+    <div class="v99-ledger-total sales"><span>Vendas</span><strong>${fmtVal(valorAportesV99(ym,'vendas'))}</strong></div>
+    <div class="v99-ledger-total branding"><span>Branding</span><strong>${fmtVal(valorAportesV99(ym,'branding'))}</strong></div>`;
+  if(!list)return;
+  if(!aportesSchemaV98){
+    list.innerHTML='<div class="v99-empty">A tabela de aportes ainda não está disponível no Supabase.</div>';return;
+  }
+  if(!all.length){
+    list.innerHTML=`<div class="v99-empty">Nenhum aporte em ${escHtml(mesLabel(ym))}. Registre cada depósito feito em Meta Ads, Google Ads ou outra mídia.</div>`;return;
+  }
+  const group=(title,rows,tipo)=>{
+    if(!rows.length)return'';
+    const subtotal=rows.reduce((s,a)=>s+Number(a.valor||0),0);
+    return `<div class="v99-ledger-group"><div class="v99-group-title"><span>${title} · ${rows.length} ${rows.length===1?'aporte':'aportes'}</span><b>${fmtVal(subtotal)}</b></div>${rows.map(a=>`
+      <div class="v99-ledger-row ${tipo}">
+        <div class="v99-ledger-date">${fmtData(a.data)}</div>
+        <div class="v99-ledger-info"><strong>${escHtml(a.plataforma||'Outro')}</strong><small>${a.descricao?escHtml(a.descricao):'Sem observação'}</small></div>
+        <div class="v99-ledger-value">${fmtVal(a.valor)}</div>
+        <div class="v99-ledger-actions"><button class="btn sm" onclick="abrirEditarAporteV98('${a.id}')"><i class="ti ti-pencil"></i>Editar</button><button class="btn danger sm" onclick="deletarAporteV98('${a.id}')"><i class="ti ti-trash"></i>Excluir</button></div>
+      </div>`).join('')}</div>`;
+  };
+  list.innerHTML=group('Investimento em vendas',vendas,'sales')+group('Branding',branding,'branding');
+}
+
+function renderAnuncios(){
+  const ym=ymAnunciosV99();
+  if(!/^\d{4}-\d{2}$/.test(ym)){
+    const sel=document.getElementById('filter-mes-anuncios');
+    if(sel){
+      const current=hoje().slice(0,7);
+      if([...sel.options].some(o=>o.value===current))sel.value=current;
+      else if([...sel.options].find(o=>o.value))sel.value=[...sel.options].find(o=>o.value).value;
+    }
+  }
+  renderResumoMesV99();
+  renderLedgerV99();
+  if(typeof renderCarrinhosAbandonados==='function')renderCarrinhosAbandonados();
+  setTimeout(()=>{try{animarNumeros(document.getElementById('panel-anuncios'))}catch{}},20);
+}
+
+function acaoFechamentoMesV99(){
+  const ym=ymAnunciosV99();
+  if(mesFechadoV99(ym))reabrirMesV99(ym);
+  else abrirFecharMesV99(ym);
+}
+
+function abrirFecharMesV99(ym=ymAnunciosV99()){
+  if(!fechamentoMesSchemaV99){alert('Rode primeiro a migração SQL V9.9 de fechamento mensal.');return}
+  const d=resumoMesInvestimentoV99(ym);
+  const f=fechamentoV99(ym);
+  document.getElementById('modal-item-conteudo').innerHTML=`
+    <button class="modal-close" onclick="fecharModalItem()">&times;</button>
+    <div class="modal-header"><div><div class="modal-title">Fechar ${escHtml(mesLabel(ym))}</div><div class="modal-subtitle">O fechamento não cria outro gasto. Ele apenas consolida os aportes já registrados e guarda as sessões do mês.</div></div></div>
+    <div class="v99-close-preview">
+      <div><span>Investimento total</span><b>${fmtVal(d.total)}</b></div>
+      <div><span>Vendas</span><b style="color:#efd05a">${fmtVal(d.vendas)}</b></div>
+      <div><span>Branding</span><b style="color:#bca7ff">${fmtVal(d.branding)}</b></div>
+      <div><span>Compras via tráfego</span><b>${d.compras}</b></div>
+      <div><span>Receita via tráfego</span><b>${fmtVal(d.receita)}</b></div>
+      <div><span>ROAS vendas</span><b>${d.roas.toFixed(2)}x</b></div>
+    </div>
+    <div class="form-grid col2">
+      <div><label>Sessões do mês</label><input type="number" id="v99-close-sessoes" min="0" step="1" value="${Number(f?.sessoes||0)||''}" placeholder="Ex: 2450" oninput="previewFecharMesV99('${ym}')"></div>
+      <div><label>Status</label><input value="Fechado" disabled></div>
+      <div style="grid-column:1/-1"><label>Observação do mês</label><input id="v99-close-obs" value="${escHtml(f?.observacoes||'')}" placeholder="Ex: coleção nova, campanha escalada na segunda quinzena"></div>
+    </div>
+    <div id="v99-close-live"></div>
+    <div class="form-note">Branding aparece separado e entra no custo financeiro total, mas o ROAS/CPA usa somente os aportes classificados como Vendas.</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn success" onclick="salvarFechamentoMesV99('${ym}')"><i class="ti ti-lock"></i>Fechar mês</button></div>`;
+  abrirModalItem();previewFecharMesV99(ym);
+}
+
+function previewFecharMesV99(ym){
+  const wrap=document.getElementById('v99-close-live');if(!wrap)return;
+  const d=resumoMesInvestimentoV99(ym),sessoes=Number(document.getElementById('v99-close-sessoes')?.value)||0;
+  const conv=sessoes>0?d.compras/sessoes*100:0,cps=sessoes>0?d.vendas/sessoes:0;
+  wrap.innerHTML=`<div class="v99-close-preview"><div><span>CPA</span><b>${fmtVal(d.cpa)}</b></div><div><span>Conversão</span><b>${sessoes?conv.toFixed(2)+'%':'—'}</b></div><div><span>Custo / sessão</span><b>${sessoes?fmtVal(cps):'—'}</b></div></div>`;
+}
+
+async function salvarFechamentoMesV99(ym){
+  const sessoes=Math.max(0,parseInt(document.getElementById('v99-close-sessoes')?.value)||0);
+  const observacoes=document.getElementById('v99-close-obs')?.value.trim()||null;
+  const row={mes:ym,status:'fechado',sessoes,observacoes,closed_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+  const r=await sb.from('investimento_fechamentos_mensais').upsert(row,{onConflict:'mes'});
+  await checarErro(r,'Erro ao fechar o mês');
+  fecharModalItem();
+  await carregarFechamentosV99();
+  renderAnuncios();
+  perfSaveV95();
+}
+
+async function reabrirMesV99(ym){
+  if(!confirm(`Reabrir ${mesLabel(ym)}? O histórico de aportes será mantido e você poderá ajustar os lançamentos antes de fechar novamente.`))return;
+  const r=await sb.from('investimento_fechamentos_mensais').upsert({
+    mes:ym,status:'aberto',closed_at:null,updated_at:new Date().toISOString()
+  },{onConflict:'mes'});
+  await checarErro(r,'Erro ao reabrir o mês');
+  await carregarFechamentosV99();
+  renderAnuncios();
+  perfSaveV95();
+}
+
+/* PERFORMANCE:
+   ROAS e CPA usam APENAS aportes classificados como vendas.
+   O dashboard financeiro continua usando gastoAdsTotal(), que soma Vendas + Branding. */
+dadosTrafegoPeriodo=function(fm=''){
+  const months=fm?[fm]:[...new Set([
+    ...(cache.aportes||[]).map(a=>getMes(a.data)).filter(Boolean),
+    ...pedidosBaseV9().map(p=>getMes(p.data)).filter(Boolean)
+  ])];
+  let vendasSpend=0,receita=0,compras=0,sessoes=0;
+  const vendas=[];
+  months.forEach(ym=>{
+    vendasSpend+=valorAportesV99(ym,'vendas');
+    const ps=pedidosTrafegoV99(ym);vendas.push(...ps);
+    receita+=ps.reduce((s,p)=>s+Number(p.receita||0),0);compras+=ps.length;
+    const f=fechamentoV99(ym);if(f?.status==='fechado')sessoes+=Number(f.sessoes||0);
+  });
+  const parcial=fm?!mesFechadoV99(fm):false;
+  return {
+    investimentos:[],fechados:[],abertos:[],vendas,receita,
+    gastoReal:vendasSpend,baseRoas:vendasSpend,sessoes,compras,
+    roas:vendasSpend>0?receita/vendasSpend:0,
+    cpa:compras>0?vendasSpend/compras:0,
+    custoSessao:sessoes>0?vendasSpend/sessoes:0,
+    conversao:sessoes>0?compras/sessoes*100:0,
+    parcial
+  };
+};
+
+/* Carrega fechamento junto com o resumo principal. */
+const carregarResumoV98Atual=carregarResumoV95;
+carregarResumoV95=async function(opts={}){
+  const f=carregarFechamentosV99();
+  await carregarResumoV98Atual(opts);
+  await f;
+  if(perfActiveTabV95()==='anuncios')renderAnuncios();
+};
+
+const carregarAbaV98Atual=carregarAbaV95;
+carregarAbaV95=async function(id,force=false){
+  const result=await carregarAbaV98Atual(id,force);
+  if(id==='anuncios'){
+    await Promise.all([carregarAportesV98(),carregarFechamentosV99()]);
+    renderAnuncios();
+  }
+  return result;
+};
+
+const perfSnapshotV98Atual=perfSnapshotV95;
+perfSnapshotV95=function(){
+  return {...perfSnapshotV98Atual(),fechamentosInvestimento:Array.isArray(cache.fechamentosInvestimento)?cache.fechamentosInvestimento:[]};
+};
+const perfLoadV98Atual=perfLoadV95;
+perfLoadV95=function(){
+  const ok=perfLoadV98Atual();
+  try{
+    const raw=localStorage.getItem(PERF_V95_KEY);
+    if(raw){
+      const x=JSON.parse(raw);
+      if(Array.isArray(x.fechamentosInvestimento))cache.fechamentosInvestimento=x.fechamentosInvestimento;
+    }
+  }catch(e){console.warn('[V9.9] cache fechamento',e)}
+  return ok;
+};
+
+/* Corrige o texto do dashboard: gasto de mídia inclui vendas + branding. */
+const renderDashboardV98Atual=renderDashboard;
+renderDashboard=function(){
+  renderDashboardV98Atual();
+  try{
+    const cards=document.querySelectorAll('#cards-resumo .card');
+    for(const card of cards){
+      const label=card.querySelector('.card-label')?.textContent?.trim();
+      if(label==='Tráfego'){
+        const sub=card.querySelector('.card-period');
+        if(sub){
+          const fm=document.getElementById('filter-mes')?.value||'';
+          const d=dadosTrafegoPeriodo(fm);
+          sub.textContent=`mídia total · ROAS vendas ${d.roas.toFixed(2)}x`;
+        }
+      }
+    }
+  }catch(e){console.warn('[V9.9] legenda dashboard',e)}
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const heading=document.querySelector('#panel-anuncios .page-heading-copy h2');
+  if(heading)heading.textContent='Investimentos do mês';
+});
+</script>
+
+
+<style id="v10-integrations-style">
+/* ═══════════════════════════════════════════════════════════════
+   V10 · META + SHOPIFY + YAMPI
+   ═══════════════════════════════════════════════════════════════ */
+.v10-auto-shell{position:relative;overflow:hidden}
+.v10-auto-shell:before{content:"";position:absolute;left:-180px;top:-170px;width:390px;height:300px;background:radial-gradient(circle,rgba(62,132,255,.08),transparent 68%);pointer-events:none}
+.v10-source-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:13px}
+.v10-source-card{padding:14px;border:1px solid #25272a;border-radius:14px;background:linear-gradient(145deg,#151618,#101113);min-width:0}
+.v10-source-card.meta{border-color:rgba(66,133,244,.20);background:linear-gradient(145deg,rgba(44,91,168,.09),#101113)}
+.v10-source-card.shopify{border-color:rgba(91,171,57,.18);background:linear-gradient(145deg,rgba(70,139,45,.075),#101113)}
+.v10-source-card.yampi{border-color:rgba(212,175,55,.19);background:linear-gradient(145deg,rgba(212,175,55,.07),#101113)}
+.v10-source-card.branding{border-color:rgba(150,113,255,.20);background:linear-gradient(145deg,rgba(126,91,220,.075),#101113)}
+.v10-source-card span{display:block;font:750 8.4px var(--font-display);text-transform:uppercase;letter-spacing:.075em;color:#71746e;margin-bottom:6px}
+.v10-source-card strong{display:block;font:850 18px/1.05 var(--font-display);letter-spacing:-.025em;color:#eceae3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v10-source-card.meta strong{color:#88afff}.v10-source-card.shopify strong{color:#83d966}.v10-source-card.yampi strong{color:#efd05a}.v10-source-card.branding strong{color:#bca7ff}
+.v10-source-card small{display:block;margin-top:6px;color:#666963;font-size:8.7px;line-height:1.35}
+.v10-connection-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 9px;border-radius:999px;border:1px solid #292b2f;background:#111214;color:#777a74;font:750 8px var(--font-display);text-transform:uppercase;letter-spacing:.04em}
+.v10-connection-pill.ok{border-color:rgba(46,204,113,.17);background:rgba(46,204,113,.045);color:#69d990}
+.v10-connection-pill.err{border-color:rgba(255,89,100,.18);background:rgba(255,89,100,.04);color:#e86c73}
+.v10-connection-dot{width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.v10-classification-warning{margin-top:9px}
+.v10-classification-warning:empty{display:none}
+.v10-warning-box{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,179,71,.17);background:rgba(255,179,71,.045);color:#c9a254;font-size:9.5px}
+.v10-campaign-list{display:grid;gap:7px;margin-top:12px}
+.v10-campaign-row{display:grid;grid-template-columns:minmax(0,1fr) 130px 115px;gap:12px;align-items:center;padding:12px 13px;border:1px solid #24262a;border-radius:13px;background:linear-gradient(145deg,#151618,#101113)}
+.v10-campaign-row:hover{border-color:#34373b}
+.v10-campaign-info{min-width:0}
+.v10-campaign-info strong{display:block;font:800 10.5px var(--font-display);color:#e5e4df;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v10-campaign-info small{display:block;color:#686b65;font-size:8.8px;margin-top:4px}
+.v10-campaign-spend{font:850 14px var(--font-display);text-align:right;color:#e6e4dd;white-space:nowrap}
+.v10-campaign-row select{height:32px;font-size:10px}
+.v10-empty{padding:18px;border:1px dashed #292b2f;border-radius:13px;text-align:center;color:#747771;font-size:9.7px}
+.v10-syncing i{animation:v10spin .8s linear infinite}
+@keyframes v10spin{to{transform:rotate(360deg)}}
+.v10-source-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border-radius:999px;background:#1b1c1f;color:#888b85;font:700 7.5px var(--font-display);margin-left:5px;vertical-align:1px}
+.v10-source-tag.auto{background:rgba(46,204,113,.065);color:#72d793}
+.v10-source-tag.fallback{background:rgba(255,179,71,.065);color:#cba554}
+@media(max-width:1000px){.v10-source-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){
+  .v10-campaign-row{grid-template-columns:1fr 105px}
+  .v10-campaign-spend{grid-column:2;grid-row:1;text-align:right}
+  .v10-campaign-row select{grid-column:1/3}
+}
+</style>
+
+<script id="v10-integrations">
+/* ═══════════════════════════════════════════════════════════════
+   V10 · META = GASTO REAL
+         SHOPIFY = SESSÕES/FUNIL
+         YAMPI/CRM = PEDIDOS/RECEITA
+         APORTES = CAIXA/FALLBACK
+   ═══════════════════════════════════════════════════════════════ */
+if(!Array.isArray(cache.metaAdsDaily)) cache.metaAdsDaily=[];
+if(!Array.isArray(cache.metaCampaignRules)) cache.metaCampaignRules=[];
+if(!Array.isArray(cache.shopifyTrafficDaily)) cache.shopifyTrafficDaily=[];
+if(!Array.isArray(cache.integrationStatus)) cache.integrationStatus=[];
+
+let integrationsSchemaV10=true;
+
+function rowsMesV10(rows,ym,dateField='data'){
+  return (rows||[]).filter(r=>String(r?.[dateField]||'').slice(0,7)===ym);
+}
+function ruleMapV10(){
+  const m=new Map();
+  (cache.metaCampaignRules||[]).forEach(r=>m.set(String(r.campaign_id),r));
+  return m;
+}
+function tipoCampanhaV10(row){
+  return ruleMapV10().get(String(row.campaign_id))?.tipo||'nao_classificado';
+}
+function metaRowsV10(ym){
+  return rowsMesV10(cache.metaAdsDaily,ym,'data');
+}
+function metaTemDadosV10(ym){
+  return metaRowsV10(ym).length>0;
+}
+function metaSpendV10(ym,tipo='todos'){
+  const rows=metaRowsV10(ym);
+  return rows.reduce((s,r)=>{
+    const t=tipoCampanhaV10(r);
+    if(t==='ignorar') return s;
+    if(tipo!=='todos'&&t!==tipo) return s;
+    return s+Number(r.spend||0);
+  },0);
+}
+function shopifyRowsV10(ym){
+  return rowsMesV10(cache.shopifyTrafficDaily,ym,'data');
+}
+function sumShopifyV10(ym,key){
+  return shopifyRowsV10(ym).reduce((s,r)=>s+Number(r?.[key]||0),0);
+}
+function integrationV10(provider){
+  return (cache.integrationStatus||[]).find(x=>x.provider===provider)||null;
+}
+function yampiPedidosMesV10(ym){
+  return pedidosBaseV9().filter(p=>getMes(p.data)===ym&&String(p.origem_dados||'').toLowerCase().includes('yampi'));
+}
+function trafegoPedidosMesV10(ym){
+  return pedidosBaseV9().filter(p=>getMes(p.data)===ym&&(p.via_trafego===true||p.via_trafego==='true'));
+}
+function resumoAutomaticoV10(ym){
+  const meta=metaTemDadosV10(ym);
+  const gastoTotal=meta?metaSpendV10(ym,'todos'):valorAportesV99(ym);
+  const gastoVendas=meta?metaSpendV10(ym,'vendas'):valorAportesV99(ym,'vendas');
+  const gastoBranding=meta?metaSpendV10(ym,'branding'):valorAportesV99(ym,'branding');
+  const naoClassificado=meta?metaSpendV10(ym,'nao_classificado'):0;
+  const sessoes=sumShopifyV10(ym,'sessions');
+  const cart=sumShopifyV10(ym,'sessions_with_cart_additions');
+  const checkout=sumShopifyV10(ym,'sessions_that_reached_checkout');
+  const shopifyCompleted=sumShopifyV10(ym,'sessions_that_completed_checkout');
+  const pedidos=trafegoPedidosMesV10(ym);
+  const receita=pedidos.reduce((s,p)=>s+Number(p.receita||0),0);
+  const compras=pedidos.length;
+  const yampi=yampiPedidosMesV10(ym).length;
+  return {
+    meta,gastoTotal,gastoVendas,gastoBranding,naoClassificado,
+    sessoes,cart,checkout,shopifyCompleted,pedidos,receita,compras,yampi,
+    roas:gastoVendas>0?receita/gastoVendas:0,
+    cpa:compras>0?gastoVendas/compras:0,
+    conversao:sessoes>0?compras/sessoes*100:0,
+    custoSessao:sessoes>0?gastoVendas/sessoes:0
+  };
+}
+
+async function carregarIntegracoesV10(){
+  const [m,r,s,st]=await Promise.all([
+    sb.from('meta_ads_daily').select('data,account_id,campaign_id,campaign_name,spend,impressions,clicks,reach,currency,synced_at').order('data',{ascending:false}).limit(15000),
+    sb.from('meta_campaign_classification').select('campaign_id,campaign_name,tipo,updated_at').limit(5000),
+    sb.from('shopify_traffic_daily').select('data,sessions,sessions_with_cart_additions,sessions_that_reached_checkout,sessions_that_completed_checkout,synced_at').order('data',{ascending:false}).limit(1500),
+    sb.from('integration_sync_status').select('provider,status,last_sync_at,last_success_at,last_error,records,metadata')
+  ]);
+  if(m.error||r.error||s.error||st.error){
+    integrationsSchemaV10=false;
+    console.warn('[V10] integração ainda não disponível',{meta:m.error,rules:r.error,shopify:s.error,status:st.error});
+    return false;
+  }
+  integrationsSchemaV10=true;
+  cache.metaAdsDaily=m.data||[];
+  cache.metaCampaignRules=r.data||[];
+  cache.shopifyTrafficDaily=s.data||[];
+  cache.integrationStatus=st.data||[];
+  return true;
+}
+
+function fmtSyncV10(v){
+  if(!v)return'Nunca';
+  const d=new Date(v);if(Number.isNaN(d.getTime()))return String(v);
+  return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+}
+function renderConnectionsV10(){
+  const wrap=document.getElementById('v10-connection-status');if(!wrap)return;
+  if(!integrationsSchemaV10){
+    wrap.innerHTML='<span class="v10-connection-pill err"><i class="v10-connection-dot"></i>Migração V10 pendente</span>';return;
+  }
+  const meta=integrationV10('meta'),shop=integrationV10('shopify');
+  const pill=(label,x)=>`<span class="v10-connection-pill ${x?.status==='success'?'ok':x?.status==='error'?'err':''}" title="${escHtml(x?.last_error||'')}"><i class="v10-connection-dot"></i>${label} ${x?.status==='success'?'OK':x?.status==='error'?'ERRO':'AGUARDANDO'}</span>`;
+  wrap.innerHTML=pill('Meta',meta)+pill('Shopify',shop);
+  const last=document.getElementById('v10-last-sync');
+  if(last){
+    const latest=[meta?.last_success_at,shop?.last_success_at].filter(Boolean).sort().reverse()[0];
+    last.textContent=latest?`Última sincronização ${fmtSyncV10(latest)}`:'Aguardando primeira sincronização';
+  }
+}
+
+function renderAutoV10(){
+  const ym=ymAnunciosV99(),d=resumoAutomaticoV10(ym),wrap=document.getElementById('v10-source-grid');
+  if(!wrap)return;
+  const spendTag=d.meta?'<span class="v10-source-tag auto">Meta API</span>':'<span class="v10-source-tag fallback">aportes</span>';
+  const shopTag=d.sessoes?'<span class="v10-source-tag auto">Shopify</span>':'<span class="v10-source-tag fallback">sem dados</span>';
+  wrap.innerHTML=`
+    <div class="v10-source-card meta"><span>Gasto Meta total ${spendTag}</span><strong>${fmtVal(d.gastoTotal)}</strong><small>custo financeiro real do mês</small></div>
+    <div class="v10-source-card meta"><span>Mídia de vendas</span><strong>${fmtVal(d.gastoVendas)}</strong><small>base usada em ROAS e CPA</small></div>
+    <div class="v10-source-card branding"><span>Branding</span><strong>${fmtVal(d.gastoBranding)}</strong><small>entra no custo, fora do ROAS</small></div>
+    <div class="v10-source-card shopify"><span>Sessões ${shopTag}</span><strong>${d.sessoes?d.sessoes.toLocaleString('pt-BR'):'—'}</strong><small>visitas reais da loja</small></div>
+    <div class="v10-source-card shopify"><span>Add to cart</span><strong>${d.cart?d.cart.toLocaleString('pt-BR'):'—'}</strong><small>${d.sessoes?((d.cart/d.sessoes)*100).toFixed(2)+'% das sessões':'Shopify'}</small></div>
+    <div class="v10-source-card shopify"><span>Chegaram ao checkout</span><strong>${d.checkout?d.checkout.toLocaleString('pt-BR'):'—'}</strong><small>funil da Shopify</small></div>
+    <div class="v10-source-card yampi"><span>Pedidos via tráfego</span><strong>${d.compras}</strong><small>${d.yampi} pedidos Yampi no mês</small></div>
+    <div class="v10-source-card yampi"><span>Receita via tráfego</span><strong>${fmtVal(d.receita)}</strong><small>Yampi/CRM · pedidos atribuídos</small></div>
+    <div class="v10-source-card"><span>ROAS vendas</span><strong>${d.roas.toFixed(2)}x</strong><small>receita ÷ mídia de vendas</small></div>
+    <div class="v10-source-card"><span>CPA</span><strong>${fmtVal(d.cpa)}</strong><small>mídia de vendas ÷ compras</small></div>
+    <div class="v10-source-card"><span>Conversão da loja</span><strong>${d.sessoes?d.conversao.toFixed(2)+'%':'—'}</strong><small>pedidos via tráfego ÷ sessões</small></div>
+    <div class="v10-source-card"><span>Custo / sessão</span><strong>${d.sessoes?fmtVal(d.custoSessao):'—'}</strong><small>mídia de vendas ÷ sessões</small></div>`;
+
+  const warn=document.getElementById('v10-classification-warning');
+  if(warn){
+    warn.innerHTML=d.naoClassificado>0?`<div class="v10-warning-box"><strong>${fmtVal(d.naoClassificado)} em campanhas ainda não classificadas.</strong> Esse valor entra no custo total, mas fica fora do ROAS até você marcar a campanha como Vendas ou Branding abaixo.</div>`:'';
+  }
+  renderConnectionsV10();
+}
+
+function campanhasMesV10(ym){
+  const map=new Map();
+  metaRowsV10(ym).forEach(r=>{
+    const id=String(r.campaign_id||'');
+    if(!id)return;
+    const x=map.get(id)||{campaign_id:id,campaign_name:r.campaign_name||id,spend:0,impressions:0,clicks:0};
+    x.spend+=Number(r.spend||0);x.impressions+=Number(r.impressions||0);x.clicks+=Number(r.clicks||0);map.set(id,x);
+  });
+  return [...map.values()].sort((a,b)=>b.spend-a.spend);
+}
+function renderCampanhasV10(){
+  const ym=ymAnunciosV99(),rows=campanhasMesV10(ym),el=document.getElementById('v10-campaign-list'),cnt=document.getElementById('v10-campaign-count');
+  if(cnt)cnt.textContent=String(rows.length);
+  if(!el)return;
+  if(!integrationsSchemaV10){el.innerHTML='<div class="v10-empty">Rode a migração V10 no Supabase.</div>';return}
+  if(!rows.length){el.innerHTML='<div class="v10-empty">Nenhuma campanha Meta sincronizada neste mês ainda.</div>';return}
+  const rules=ruleMapV10();
+  el.innerHTML=rows.map(c=>{
+    const tipo=rules.get(c.campaign_id)?.tipo||'nao_classificado';
+    return `<div class="v10-campaign-row">
+      <div class="v10-campaign-info"><strong>${escHtml(c.campaign_name)}</strong><small>${c.impressions.toLocaleString('pt-BR')} impressões · ${c.clicks.toLocaleString('pt-BR')} cliques</small></div>
+      <div class="v10-campaign-spend">${fmtVal(c.spend)}</div>
+      <select onchange="classificarCampanhaV10('${c.campaign_id}',this.value)">
+        <option value="nao_classificado" ${tipo==='nao_classificado'?'selected':''}>Classificar…</option>
+        <option value="vendas" ${tipo==='vendas'?'selected':''}>Vendas</option>
+        <option value="branding" ${tipo==='branding'?'selected':''}>Branding</option>
+        <option value="ignorar" ${tipo==='ignorar'?'selected':''}>Ignorar</option>
+      </select>
+    </div>`;
+  }).join('');
+}
+async function classificarCampanhaV10(id,tipo){
+  const row=campanhasMesV10(ymAnunciosV99()).find(c=>c.campaign_id===String(id));
+  const r=await sb.from('meta_campaign_classification').upsert({
+    campaign_id:String(id),campaign_name:row?.campaign_name||String(id),tipo,updated_at:new Date().toISOString()
+  },{onConflict:'campaign_id'});
+  await checarErro(r,'Erro ao classificar campanha');
+  await carregarIntegracoesV10();
+  renderAnuncios();
+  renderDashboard();
+  perfSaveV95();
+}
+
+async function sincronizarIntegracoesV10(){
+  const btn=document.getElementById('v10-sync-btn');
+  if(btn){btn.disabled=true;btn.classList.add('v10-syncing');btn.innerHTML='<i class="ti ti-refresh"></i>Sincronizando…'}
+  const ym=ymAnunciosV99();
+  const [y,m]=ym.split('-').map(Number);
+  const since=`${ym}-01`;
+  const until=new Date(y,m,0).toISOString().slice(0,10);
+  const body={since,until};
+  const results=await Promise.allSettled([
+    sb.functions.invoke('meta-ads-sync',{body}),
+    sb.functions.invoke('shopify-traffic-sync',{body})
+  ]);
+  results.forEach((r,i)=>{
+    if(r.status==='rejected')console.warn('[V10] sync rejeitado',i,r.reason);
+    else if(r.value?.error)console.warn('[V10] sync erro',i,r.value.error);
+  });
+  await carregarIntegracoesV10();
+  renderAnuncios();renderDashboard();perfSaveV95();
+  if(btn){btn.disabled=false;btn.classList.remove('v10-syncing');btn.innerHTML='<i class="ti ti-refresh"></i>Sincronizar agora'}
+}
+
+/* V10 redefine a fonte financeira:
+   - se Meta tem dados no mês: usa gasto real Meta
+   - sem Meta: fallback para aportes da V9.9 */
+const gastoAdsTotalV99Fallback=gastoAdsTotal;
+gastoAdsTotal=function(fm=''){
+  const calcMes=(ym)=>{
+    if(metaTemDadosV10(ym))return metaSpendV10(ym,'todos');
+    const ap=valorAportesV99(ym);
+    return ap>0?ap:gastoAdsTotalV99Fallback(ym);
+  };
+  if(fm)return calcMes(fm);
+  const meses=new Set([
+    ...(cache.metaAdsDaily||[]).map(r=>String(r.data||'').slice(0,7)).filter(Boolean),
+    ...(cache.aportes||[]).map(r=>getMes(r.data)).filter(Boolean),
+    ...pedidosBaseV9().map(p=>getMes(p.data)).filter(Boolean)
+  ]);
+  return [...meses].reduce((s,ym)=>s+calcMes(ym),0);
+};
+
+/* Performance usa gasto de campanhas classificadas como Vendas.
+   Se Meta ainda não tiver dados, cai nos aportes manuais. */
+dadosTrafegoPeriodo=function(fm=''){
+  const meses=fm?[fm]:[...new Set([
+    ...(cache.metaAdsDaily||[]).map(r=>String(r.data||'').slice(0,7)).filter(Boolean),
+    ...(cache.aportes||[]).map(a=>getMes(a.data)).filter(Boolean),
+    ...pedidosBaseV9().map(p=>getMes(p.data)).filter(Boolean)
+  ])];
+  let gasto=0,receita=0,compras=0,sessoes=0;const vendas=[];
+  meses.forEach(ym=>{
+    gasto+=metaTemDadosV10(ym)?metaSpendV10(ym,'vendas'):valorAportesV99(ym,'vendas');
+    const ps=trafegoPedidosMesV10(ym);vendas.push(...ps);
+    receita+=ps.reduce((s,p)=>s+Number(p.receita||0),0);compras+=ps.length;
+    sessoes+=sumShopifyV10(ym,'sessions');
+  });
+  return {
+    investimentos:[],fechados:[],abertos:[],vendas,receita,
+    gastoReal:gasto,baseRoas:gasto,sessoes,compras,
+    roas:gasto>0?receita/gasto:0,
+    cpa:compras>0?gasto/compras:0,
+    custoSessao:sessoes>0?gasto/sessoes:0,
+    conversao:sessoes>0?compras/sessoes*100:0,
+    parcial:fm?!mesFechadoV99(fm):false
+  };
+};
+
+/* Resumo/fechamento mensal passa a usar as fontes automáticas. */
+resumoMesInvestimentoV99=function(ym){
+  const d=resumoAutomaticoV10(ym),f=fechamentoV99(ym);
+  return {
+    ym,vendas:d.gastoVendas,branding:d.gastoBranding,total:d.gastoTotal,
+    pedidos:d.pedidos,receita:d.receita,compras:d.compras,sessoes:d.sessoes,
+    roas:d.roas,cpa:d.cpa,conversao:d.conversao,custoSessao:d.custoSessao,
+    fechado:f?.status==='fechado',fechamento:f
+  };
+};
+
+/* Fechamento: Shopify é a fonte das sessões. Só pede manualmente se não houver dado. */
+abrirFecharMesV99=function(ym=ymAnunciosV99()){
+  if(!fechamentoMesSchemaV99){alert('Rode primeiro a migração SQL de fechamento mensal.');return}
+  const d=resumoMesInvestimentoV99(ym),f=fechamentoV99(ym),auto=d.sessoes>0;
+  document.getElementById('modal-item-conteudo').innerHTML=`
+    <button class="modal-close" onclick="fecharModalItem()">&times;</button>
+    <div class="modal-header"><div><div class="modal-title">Fechar ${escHtml(mesLabel(ym))}</div><div class="modal-subtitle">Meta fornece o gasto real, Shopify fornece as sessões e Yampi/CRM fornece vendas e receita.</div></div></div>
+    <div class="v99-close-preview">
+      <div><span>Gasto total</span><b>${fmtVal(d.total)}</b></div>
+      <div><span>Vendas</span><b style="color:#efd05a">${fmtVal(d.vendas)}</b></div>
+      <div><span>Branding</span><b style="color:#bca7ff">${fmtVal(d.branding)}</b></div>
+      <div><span>Sessões Shopify</span><b>${d.sessoes?d.sessoes.toLocaleString('pt-BR'):'—'}</b></div>
+      <div><span>Receita via tráfego</span><b>${fmtVal(d.receita)}</b></div>
+      <div><span>ROAS vendas</span><b>${d.roas.toFixed(2)}x</b></div>
+    </div>
+    <div class="form-grid col2">
+      <div><label>Sessões do mês</label><input type="number" id="v99-close-sessoes" min="0" step="1" value="${d.sessoes||Number(f?.sessoes||0)||''}" ${auto?'disabled':''} placeholder="Fallback manual"></div>
+      <div><label>Fonte</label><input value="${auto?'Shopify automática':'Manual · Shopify sem dados'}" disabled></div>
+      <div style="grid-column:1/-1"><label>Observação do mês</label><input id="v99-close-obs" value="${escHtml(f?.observacoes||'')}" placeholder="Observação opcional"></div>
+    </div>
+    <div class="form-note">${auto?'As sessões foram sincronizadas automaticamente da Shopify.':'Ainda não há sessões da Shopify para este mês; por isso o campo ficou liberado como fallback manual.'}</div>
+    <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn success" onclick="salvarFechamentoMesV10('${ym}')"><i class="ti ti-lock"></i>Fechar mês</button></div>`;
+  abrirModalItem();
+};
+
+async function salvarFechamentoMesV10(ym){
+  const auto=sumShopifyV10(ym,'sessions');
+  const sessoes=auto||Math.max(0,parseInt(document.getElementById('v99-close-sessoes')?.value)||0);
+  const observacoes=document.getElementById('v99-close-obs')?.value.trim()||null;
+  const r=await sb.from('investimento_fechamentos_mensais').upsert({
+    mes:ym,status:'fechado',sessoes,observacoes,closed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  },{onConflict:'mes'});
+  await checarErro(r,'Erro ao fechar o mês');fecharModalItem();await carregarFechamentosV99();renderAnuncios();perfSaveV95();
+}
+
+/* Aportes continuam visíveis como caixa, mas o texto deixa claro que não são gasto
+   quando Meta está sincronizada. */
+const renderLedgerV99BaseV10=renderLedgerV99;
+renderLedgerV99=function(){
+  renderLedgerV99BaseV10();
+  const ym=ymAnunciosV99(),summary=document.getElementById('v99-ledger-summary');
+  if(summary&&metaTemDadosV10(ym)){
+    summary.insertAdjacentHTML('afterbegin',`<div class="v99-ledger-total"><span>Uso no financeiro</span><strong>Somente caixa</strong></div>`);
+    summary.style.gridTemplateColumns='repeat(4,minmax(0,1fr))';
+  }
+};
+
+/* Render V10 da aba */
+const renderAnunciosV99BaseV10=renderAnuncios;
+renderAnuncios=function(){
+  renderAnunciosV99BaseV10();
+  renderAutoV10();
+  renderCampanhasV10();
+  renderConnectionsV10();
+};
+
+/* Carregamento V10 junto da fonte principal. */
+const carregarResumoV99BaseV10=carregarResumoV95;
+carregarResumoV95=async function(opts={}){
+  const integ=carregarIntegracoesV10();
+  await carregarResumoV99BaseV10(opts);
+  await integ;
+  renderDashboard();
+  if(perfActiveTabV95()==='anuncios')renderAnuncios();
+};
+
+const carregarAbaV99BaseV10=carregarAbaV95;
+carregarAbaV95=async function(id,force=false){
+  const r=await carregarAbaV99BaseV10(id,force);
+  if(id==='anuncios'){
+    await carregarIntegracoesV10();
+    renderAnuncios();
+  }
+  return r;
+};
+
+/* Cache visual também guarda integrações, mas Supabase continua fonte principal. */
+const perfSnapshotV99BaseV10=perfSnapshotV95;
+perfSnapshotV95=function(){
+  return {
+    ...perfSnapshotV99BaseV10(),
+    metaAdsDaily:Array.isArray(cache.metaAdsDaily)?cache.metaAdsDaily:[],
+    metaCampaignRules:Array.isArray(cache.metaCampaignRules)?cache.metaCampaignRules:[],
+    shopifyTrafficDaily:Array.isArray(cache.shopifyTrafficDaily)?cache.shopifyTrafficDaily:[],
+    integrationStatus:Array.isArray(cache.integrationStatus)?cache.integrationStatus:[]
+  };
+};
+const perfLoadV99BaseV10=perfLoadV95;
+perfLoadV95=function(){
+  const ok=perfLoadV99BaseV10();
+  try{
+    const raw=localStorage.getItem(PERF_V95_KEY);
+    if(raw){
+      const x=JSON.parse(raw);
+      if(Array.isArray(x.metaAdsDaily))cache.metaAdsDaily=x.metaAdsDaily;
+      if(Array.isArray(x.metaCampaignRules))cache.metaCampaignRules=x.metaCampaignRules;
+      if(Array.isArray(x.shopifyTrafficDaily))cache.shopifyTrafficDaily=x.shopifyTrafficDaily;
+      if(Array.isArray(x.integrationStatus))cache.integrationStatus=x.integrationStatus;
+    }
+  }catch(e){console.warn('[V10] cache integrações',e)}
+  return ok;
+};
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const h=document.querySelector('#panel-anuncios .page-heading-copy h2');if(h)h.textContent='Mídia & aquisição';
 });
 </script>
 
