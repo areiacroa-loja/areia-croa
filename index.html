@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Areia Crôa — Dashboard Financeiro</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -735,6 +735,28 @@ body::before{
 .abandon-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:5px}.abandon-name{font:800 12px var(--font-display);color:#e8e7e1}.abandon-meta{font-size:9.5px;color:#777a74;line-height:1.55}.abandon-products{font-size:10px;color:#b5b7b1;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:680px}.abandon-side{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:7px}.abandon-value{font:800 16px var(--font-display);color:#efd05a}.abandon-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}.abandon-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:rgba(255,255,255,.045);color:#8f928c;font:750 8px var(--font-display)}.abandon-badge.uf{background:rgba(212,175,55,.09);color:#dcc45e}.abandon-badge.ok{background:rgba(46,204,113,.10);color:#69db92}.abandon-badge.warn{background:rgba(255,179,71,.08);color:#e3b04b}
 @media(max-width:760px){.abandon-kpis{grid-template-columns:1fr 1fr}.abandon-card{grid-template-columns:1fr}.abandon-side{align-items:flex-start;text-align:left}.abandon-actions{justify-content:flex-start}.abandoned-toolbar input,.abandoned-toolbar select{width:100%;min-width:0;flex:1 1 100%}}
 @media(max-width:390px){.abandon-kpis{grid-template-columns:1fr}.abandon-card{padding:12px}}
+
+/* ═══════════════════════════════════════════════════════════════
+   V10.7 · FRETE REAL + BRINDES + MOBILE/ZOOM
+   ═══════════════════════════════════════════════════════════════ */
+.v107-cost-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.v107-cost-box{border:1px solid #2a2d31;background:#111315;border-radius:13px;padding:11px 12px;min-width:0}.v107-cost-box span{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#72766f}.v107-cost-box b{display:block;margin-top:5px;font:800 14px var(--font-display);color:#efede6}.v107-cost-box.gift b{color:#dfc76e}
+.v107-toggle-box{border:1px solid #292d31;border-radius:15px;background:#111315;margin:10px 0;overflow:hidden}.v107-toggle-row{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px;cursor:pointer}.v107-toggle-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;border:1px solid #30343a;color:var(--accent);font-size:17px}.v107-toggle-copy{min-width:0}.v107-toggle-copy strong{display:block;font:750 11px var(--font-display)}.v107-toggle-copy small{display:block;color:#72766f;font-size:9px;line-height:1.35;margin-top:2px}.v107-toggle-row input{position:absolute;opacity:0;pointer-events:none}.v107-switch{width:42px;height:24px;border:1px solid #383c40;border-radius:999px;background:#282b2e;padding:2px}.v107-switch i{display:block;width:18px;height:18px;border-radius:50%;background:#747872;transition:.18s}.v107-toggle-row input:checked + .v107-switch{background:#b38d29;border-color:#d5b347}.v107-toggle-row input:checked + .v107-switch i{transform:translateX(18px);background:#fff6d1}
+.v107-gift-value{display:none;padding:0 12px 12px}.v107-gift-value.show{display:block}.v107-gift-value label{margin-top:0}.v107-gift-value input{max-width:240px}
+.v107-freight-note{padding:9px 11px;border:1px solid #292c30;border-radius:11px;background:#0e1012;color:#858980;font-size:9.2px;line-height:1.45;margin:8px 0 12px}.v107-freight-note strong{color:#d9c471}.v107-freight-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:7px}.v107-freight-tools .btn{height:30px;font-size:10px;padding:0 10px}
+.v107-freight-list{display:grid;gap:7px;margin-top:8px}.v107-freight-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #272a2e;border-radius:11px;padding:9px 10px;background:#101214}.v107-freight-row .left{min-width:0}.v107-freight-row strong{display:block;font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.v107-freight-row small{display:block;color:#6d716b;font-size:8.2px;margin-top:2px}.v107-freight-row .amount{font:800 11px var(--font-display);white-space:nowrap}.v107-freight-row.excluded{opacity:.52}.v107-freight-row.excluded .amount{text-decoration:line-through}.v107-freight-badge{display:inline-flex;margin-left:5px;padding:2px 5px;border-radius:999px;border:1px solid rgba(72,209,122,.18);color:#69cf8a;font-size:7px;text-transform:uppercase}.v107-freight-row.excluded .v107-freight-badge{border-color:rgba(255,98,104,.18);color:#ff747b}
+.v107-product-hero{margin:0 0 14px;border:1px solid #292c30;border-radius:16px;overflow:hidden;background:#0d0f11;min-height:180px;display:flex;align-items:center;justify-content:center}.v107-product-hero img{display:block;width:100%;max-height:420px;object-fit:contain;background:#fff}
+.v107-meta-explain{margin-top:10px;padding:9px 11px;border:1px solid rgba(213,179,71,.16);background:rgba(213,179,71,.035);border-radius:11px;color:#777b73;font-size:8.7px;line-height:1.5}.v107-meta-explain strong{color:#cbb65e}
+@media(max-width:700px){
+  html,body,#app-root,.app{width:100%!important;max-width:100vw!important;overflow-x:hidden!important}
+  input,select,textarea{font-size:16px!important;max-width:100%!important}
+  .modal-box,.multi-order-box{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;margin-left:auto!important;margin-right:auto!important;overflow-x:hidden!important}
+  .v107-cost-grid{grid-template-columns:1fr 1fr}.v107-toggle-copy strong{font-size:10.5px}.v107-toggle-copy small{font-size:8.7px}
+  .v107-freight-row{grid-template-columns:minmax(0,1fr) auto}.v107-product-hero{min-height:140px}
+  .multi-item,.v10-campaign-row,.v106-product-card{max-width:100%!important;min-width:0!important}
+}
+@media(max-width:420px){.v107-cost-grid{grid-template-columns:1fr}.v107-gift-value input{max-width:none}}
+@media(pointer:coarse){.btn:active,.venda-card:active,.v106-product-card:active,.drawer-item:active,.side-nav-item:active{transform:none!important}}
 
 </style>
 
@@ -5419,6 +5441,140 @@ async function sincronizarCatalogoYampiV106(){
 document.addEventListener('DOMContentLoaded',()=>{
   atualizarResumoProdutosV106();
 });
+</script>
+
+
+<script id="v10-7-frete-brinde-mobile">
+/* ═══════════════════════════════════════════════════════════════
+   V10.7 · FRETES REAIS + BRINDES + EMBALAGEM R$5 + MOBILE
+   ═══════════════════════════════════════════════════════════════ */
+cache.fretesPedido = Array.isArray(cache.fretesPedido) ? cache.fretesPedido : [];
+
+function v107Same(a,b){return String(a??'')===String(b??'')}
+function fretesPedidoV107(id){return (cache.fretesPedido||[]).filter(f=>v107Same(f.pedido_id,id))}
+function freteAutomaticoV107(id){return fretesPedidoV107(id).filter(f=>f.entra_no_custo!==false).reduce((s,f)=>s+Number(f.valor||0),0)}
+function custoBrindeV107(p){return p?.tem_brinde?Number(p?.custo_brinde||0):0}
+
+// O custo do pedido passa a considerar o brinde explicitamente.
+custoPedidoV9=function(p){return Number(p?.custo_produtos||0)+Number(p?.custo_embalagens||0)+Number(p?.frete||0)+Number(p?.taxas||0)+custoBrindeV107(p)};
+lucroPedidoV9=function(p){return Number(p?.receita||0)-custoPedidoV9(p)};
+
+// O resumo carrega também os fretes auditáveis e os novos campos do pedido.
+carregarResumoV95=async function({silent=false}={}){
+  if(!silent)perfStatusV95(perfV95.cacheHit?'Atualizando em segundo plano…':'Carregando resumo…');
+  const [ped,anun,met,fr]=await Promise.all([
+    sb.from('pedidos').select('*').order('data',{ascending:false}),
+    sb.from('anuncios').select('id,tipo,data,plataforma,descricao,valor,valor_planejado,valor_gasto,status,data_fim,sessoes,carrinhos_qtd,vendas_qtd,receita_atribuida').order('data',{ascending:false}),
+    sb.from('metas_mensais').select('id,mes,ano,investimento_previsto,faturamento_previsto').order('ano',{ascending:false}).order('mes',{ascending:false}),
+    sb.from('pedido_fretes').select('*').order('created_at',{ascending:true})
+  ]);
+  if(ped.error)throw ped.error;
+  if(anun.error)console.warn('[V10.7] anúncios',anun.error);
+  if(met.error)console.warn('[V10.7] metas',met.error);
+  if(fr.error)console.warn('[V10.7] fretes',fr.error);
+  cache.pedidos=ped.data||[];cache.anuncios=anun.data||[];cache.metas=met.data||[];cache.fretesPedido=fr.data||[];
+  cache.pedidosErro=null;cache.estadoViewErro=null;pedidosSchemaV8=true;
+  popularSelectMes();renderDashboard();
+  if(typeof renderAnuncios==='function'&&perfActiveTabV95()==='anuncios')renderAnuncios();
+  perfSaveV95();
+  if(!silent)perfStatusV95('Supabase sincronizado · custos reais V10.7');
+  return true;
+};
+
+function toggleBrindeV107(prefix='v107-ped'){
+  const ck=document.getElementById(prefix+'-brinde'),box=document.getElementById(prefix+'-brinde-box'),input=document.getElementById(prefix+'-brinde-valor');
+  if(box)box.classList.toggle('show',!!ck?.checked);
+  if(!ck?.checked&&input)input.value='0';
+  if(prefix==='v107-new')atualizarPreviewV9();
+}
+
+function usarFreteAutomaticoV107(id){
+  const el=document.getElementById('v107-ped-frete');if(!el)return;
+  const auto=freteAutomaticoV107(id);el.value=auto.toFixed(2);el.dataset.auto='1';
+  const lab=document.getElementById('v107-frete-mode');if(lab)lab.textContent='Será usada a soma automática dos envios vinculados.';
+}
+
+function htmlFretesV107(p){
+  const rows=fretesPedidoV107(p.id);if(!rows.length)return '';
+  const soma=rows.filter(x=>x.entra_no_custo!==false).reduce((s,x)=>s+Number(x.valor||0),0);
+  return `<div class="modal-section-label">Envios / fretes registrados</div><div class="v107-freight-list">${rows.map(f=>`<div class="v107-freight-row ${f.entra_no_custo===false?'excluded':''}"><div class="left"><strong>${escHtml(f.transportadora||f.origem||'Frete')} ${f.servico?'· '+escHtml(f.servico):''}<span class="v107-freight-badge">${f.entra_no_custo===false?'excluído':'custo'}</span></strong><small>${f.rastreio?escHtml(f.rastreio)+' · ':''}${escHtml(f.status||'')}${f.data_postagem?' · '+fmtData(f.data_postagem):''}</small></div><div class="amount">${fmtVal(f.valor)}</div></div>`).join('')}</div><div class="v107-freight-note">Soma dos envios que entram no custo: <strong>${fmtVal(soma)}</strong>. Cancelados/estornados ficam no histórico, mas não entram nessa soma.</div>`;
+}
+
+abrirEditarPedidoV96=function(id){
+  const p=pedidosBaseV9().find(x=>v107Same(x.id,id));if(!p)return;
+  const canais=['Shopify','Yampi','Instagram','Presencial','Mercado Livre','WhatsApp','Outro'].map(c=>`<option ${c===p.canal?'selected':''}>${c}</option>`).join('');
+  const auto=freteAutomaticoV107(p.id),temLedger=fretesPedidoV107(p.id).length>0,manual=p.frete_manual!==null&&p.frete_manual!==undefined;
+  document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()">&times;</button><div class="modal-header"><div><div class="modal-title">Editar pedido ${escHtml(p.referencia||'#'+p.id)}</div><div class="modal-subtitle">Custos do pedido, tráfego e brinde ficam centralizados aqui.</div></div></div>
+  <div class="form-grid col2"><div><label>Data</label><input type="date" id="v96-ped-data" value="${p.data||hoje()}"></div><div><label>Canal</label><select id="v96-ped-canal">${canais}</select></div><div><label>Cliente</label><input id="v96-ped-cliente" value="${escHtml(p.cliente_nome||'')}"></div><div><label>Telefone</label><input id="v96-ped-tel" value="${escHtml(p.cliente_telefone||'')}"></div><div><label>Estado</label><select id="v96-ped-estado">${estadoOptionsV6(normalizeUFV6(p.estado))}</select></div><div><label>Cidade</label><input id="v96-ped-cidade" value="${escHtml(p.cidade||'')}"></div><div style="grid-column:1/-1"><label>Observação</label><input id="v96-ped-obs" value="${escHtml(p.observacoes||'')}"></div></div>
+  <div class="modal-section-label">Custos do pedido</div><div class="form-grid col2"><div><label>Frete real pago (R$)</label><input type="number" id="v107-ped-frete" value="${Number(p.frete||0).toFixed(2)}" min="0" step="0.01" oninput="this.dataset.auto='0'"><div class="v107-freight-tools">${temLedger?`<button class="btn" type="button" onclick="usarFreteAutomaticoV107('${p.id}')"><i class="ti ti-refresh"></i>Usar soma dos envios</button>`:''}</div></div><div><label>Embalagem (R$)</label><input type="number" id="v107-ped-emb" value="${Number(p.custo_embalagens??5).toFixed(2)}" min="0" step="0.01"></div></div>
+  ${temLedger?`<div class="v107-freight-note" id="v107-frete-mode">${manual?'Existe um valor manual de frete neste pedido.':'Frete automático dos envios vinculados: <strong>'+fmtVal(auto)+'</strong>.'}</div>`:''}
+  <div class="traffic-origin-box ${pedidoEhTrafegoV96(p)?'active':''} v96-traffic-toggle"><label class="traffic-origin-row" for="v96-ped-trafego"><span class="traffic-origin-icon"><i class="ti ti-ad"></i></span><span class="traffic-origin-copy"><strong>Venda feita pelo tráfego pago</strong><small>Marcado = entra em Compras, Receita, CPA e ROAS.</small></span><input type="checkbox" id="v96-ped-trafego" ${pedidoEhTrafegoV96(p)?'checked':''}><span class="traffic-switch"><i></i></span></label></div>
+  <div class="v107-toggle-box"><label class="v107-toggle-row" for="v107-ped-brinde"><span class="v107-toggle-icon"><i class="ti ti-gift"></i></span><span class="v107-toggle-copy"><strong>Pedido teve brinde</strong><small>O custo do brinde reduz o lucro real deste pedido.</small></span><input type="checkbox" id="v107-ped-brinde" ${p.tem_brinde?'checked':''} onchange="toggleBrindeV107()"><span class="v107-switch"><i></i></span></label><div class="v107-gift-value ${p.tem_brinde?'show':''}" id="v107-ped-brinde-box"><label>Valor de custo do brinde (R$)</label><input type="number" id="v107-ped-brinde-valor" value="${Number(p.custo_brinde||0).toFixed(2)}" min="0" step="0.01"></div></div>
+  <div class="v107-cost-grid"><div class="v107-cost-box"><span>Produto(s)</span><b>${fmtVal(p.custo_produtos)}</b></div><div class="v107-cost-box"><span>Frete atual</span><b>${fmtVal(p.frete)}</b></div><div class="v107-cost-box gift"><span>Brinde</span><b>${fmtVal(custoBrindeV107(p))}</b></div></div>
+  <div class="modal-actions"><button class="btn ghost" onclick="fecharModalItem()">Cancelar</button><button class="btn primary" onclick="salvarEditarPedidoV96('${String(p.id).replace(/'/g,"\\'")}')"><i class="ti ti-check"></i>Salvar pedido</button></div>`;
+  abrirModalItem();
+};
+
+salvarEditarPedidoV96=async function(id){
+  const p=pedidosBaseV9().find(x=>v107Same(x.id,id));if(!p)return;
+  const estado=normalizeUFV6(document.getElementById('v96-ped-estado')?.value),freteEl=document.getElementById('v107-ped-frete'),frete=Math.max(0,Number(freteEl?.value||0)),emb=Math.max(0,Number(document.getElementById('v107-ped-emb')?.value||5));
+  const temBrinde=!!document.getElementById('v107-ped-brinde')?.checked,custoBrinde=temBrinde?Math.max(0,Number(document.getElementById('v107-ped-brinde-valor')?.value||0)):0;
+  const temLedger=fretesPedidoV107(id).length>0,auto=freteAutomaticoV107(id);let freteManual;
+  if(temLedger&&(freteEl?.dataset.auto==='1'||Math.abs(frete-auto)<.005))freteManual=null;else freteManual=frete;
+  const row={data:document.getElementById('v96-ped-data')?.value||hoje(),canal:document.getElementById('v96-ped-canal')?.value||'Outro',cliente_nome:document.getElementById('v96-ped-cliente')?.value.trim()||null,cliente_telefone:document.getElementById('v96-ped-tel')?.value.trim()||null,estado:estado||null,cidade:document.getElementById('v96-ped-cidade')?.value.trim()||null,observacoes:document.getElementById('v96-ped-obs')?.value.trim()||null,via_trafego:!!document.getElementById('v96-ped-trafego')?.checked,frete,custo_embalagens:emb,tem_brinde:temBrinde,custo_brinde:custoBrinde,frete_manual:freteManual};
+  await checarErro(await sb.from('pedidos').update(row).eq('id',id),'Erro ao editar pedido');
+  const child={data:row.data,canal:row.canal,estado:row.estado,cidade:row.cidade,via_trafego:row.via_trafego};
+  const cr=await sb.from('vendas').update(child).eq('pedido_id',id);if(cr.error)console.warn('[V10.7] linhas do pedido',cr.error);
+  const rr=await sb.rpc('ac_recalcular_pedido_v94',{p_id:Number(id)});if(rr.error)console.warn('[V10.7] recálculo',rr.error);
+  fecharModalItem();await carregarResumoV95({silent:true});if(perfActiveTabV95()==='vendas'){await carregarVendasV95(true);renderVendas()}renderDashboard();perfSaveV95();
+};
+
+abrirModalPedidoV9=function(id){
+  const p=pedidosBaseV9().find(x=>v107Same(x.id,id));if(!p)return;const itens=itensPedidoV9(p),uf=normalizeUFV6(p.estado),luc=lucroPedidoV9(p),traf=pedidoEhTrafegoV96(p),gift=custoBrindeV107(p);
+  document.getElementById('modal-venda-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalVenda()">&times;</button><div class="modal-header"><div><span class="venda-codigo">${escHtml(p.referencia||'#'+p.id)}</span>${Number(p.itens||1)>1?`<span class="order-badge-v9"><i class="ti ti-layers-subtract"></i>${p.itens} itens</span>`:''}${traf?'<span class="traffic-sale-badge"><i class="ti ti-ad"></i> tráfego</span>':''}${p.tem_brinde?'<span class="traffic-sale-badge"><i class="ti ti-gift"></i> brinde</span>':''}<div class="modal-title" style="margin-top:9px">${escHtml(p.cliente_nome||'Pedido')}</div><div class="modal-subtitle">${fmtData(p.data)} · ${escHtml(p.canal||'Outro')}${uf?' · '+escHtml(nomeEstadoV6(uf)):''}</div></div></div><div class="modal-section-label">Itens do pedido</div><div class="order-items-preview">${itens.length?itens.map(v=>`<div class="order-item-preview" onclick="abrirEdicaoVenda('${v.id}')" style="cursor:pointer"><span><strong>${Number(v.quantidade||1)}×</strong> ${escHtml(v.produto_nome)}</span><strong>${fmtVal(v.receita)}</strong></div>`).join(''):'<div class="order-item-preview"><span>Itens não vinculados.</span></div>'}</div><div class="modal-section-label">Financeiro do pedido</div><div class="modal-row"><span>Receita</span><span style="color:var(--success)">${fmtVal(p.receita)}</span></div><div class="modal-row"><span>Custo produtos</span><span>${fmtVal(p.custo_produtos)}</span></div><div class="modal-row"><span>Frete real</span><span>${fmtVal(p.frete)}</span></div><div class="modal-row"><span>Embalagem</span><span>${fmtVal(p.custo_embalagens)}</span></div><div class="modal-row"><span>Taxas</span><span>${fmtVal(p.taxas)}</span></div><div class="modal-row"><span>Brinde</span><span>${p.tem_brinde?fmtVal(gift):'—'}</span></div><div class="modal-row"><span>Origem</span><span style="color:${traf?'var(--accent)':'var(--text)'}">${traf?'Tráfego pago':'Orgânico / não atribuído'}</span></div><div class="modal-total"><span>Lucro operacional</span><span style="color:${luc>=0?'var(--success)':'var(--danger)'}">${fmtVal(luc)}</span></div>${htmlFretesV107(p)}<div class="modal-actions"><button class="btn ghost" onclick="fecharModalVenda()">Fechar</button><button class="btn primary" onclick="fecharModalVenda();abrirEditarPedidoV96('${p.id}')"><i class="ti ti-pencil"></i>Editar pedido</button></div>`;
+  document.getElementById('modal-venda').classList.remove('hidden');document.body.classList.add('modal-open');
+};
+
+// Novo pedido: embalagem padrão R$5, frete livre e brinde opcional.
+modalNovaVendaHTMLV9=function(){return `<button class="modal-close" onclick="fecharModalNovaVenda()">&times;</button><div class="modal-header"><div><div class="modal-title">Novo pedido</div><div class="modal-subtitle">Produto, frete, embalagem e brinde entram no lucro real.</div></div></div><div class="form-grid col4"><div><label>Data</label><input type="date" id="v-data" value="${hoje()}"></div><div><label>Canal</label><select id="v-canal"><option>Yampi</option><option>Shopify</option><option>Instagram</option><option>Presencial</option><option>Mercado Livre</option><option>WhatsApp</option><option>Outro</option></select></div><div><label>Estado</label><select id="v-estado">${estadoOptionsV6('')}</select></div><div><label>Cidade</label><input id="v-cidade" placeholder="Cidade"></div><div><label>Cliente</label><input id="v-cliente-nome" list="lista-clientes" placeholder="Nome do cliente"></div><div><label>Telefone</label><input id="v-cliente-tel" placeholder="(75) 99999-9999"></div><div style="grid-column:span 2"><label>Pedido / referência</label><input id="v-obs" placeholder="Ex: #146 ou pedido Yampi"></div></div><div class="modal-section-label">Produtos do pedido</div><div class="multi-items" id="multi-items-v9"></div><button class="multi-add" onclick="adicionarItemNovaVendaV9()"><i class="ti ti-plus"></i> Adicionar outro produto</button><div class="modal-section-label">Custos do pedido</div><div class="form-grid col3"><div><label>Frete real pago (R$)</label><input type="number" id="v-frete" value="0" step="0.01" min="0" oninput="atualizarPreviewV9()"></div><div><label>Embalagem padrão (R$)</label><input type="number" id="v-custo-emb-v9" value="5.00" step="0.01" min="0" oninput="atualizarPreviewV9()"></div><div><label>Taxa gateway (R$)</label><input type="number" id="v-taxa" value="0" step="0.01" min="0" oninput="atualizarPreviewV9()"></div></div><div class="traffic-origin-box" id="traffic-origin-box"><label class="traffic-origin-row" for="v-via-trafego"><span class="traffic-origin-icon"><i class="ti ti-ad"></i></span><span class="traffic-origin-copy"><strong>Pedido feito pelo tráfego pago</strong><small>O pedido entra em compras e faturamento atribuídos.</small></span><input type="checkbox" id="v-via-trafego" onchange="atualizarOrigemTrafegoUI()"><span class="traffic-switch"><i></i></span></label><div class="traffic-origin-note" id="traffic-origin-note">Desmarcado · pedido não atribuído aos anúncios.</div></div><div class="v107-toggle-box"><label class="v107-toggle-row" for="v107-new-brinde"><span class="v107-toggle-icon"><i class="ti ti-gift"></i></span><span class="v107-toggle-copy"><strong>Pedido teve brinde</strong><small>Informe somente o custo do brinde para a empresa.</small></span><input type="checkbox" id="v107-new-brinde" onchange="toggleBrindeV107('v107-new')"><span class="v107-switch"><i></i></span></label><div class="v107-gift-value" id="v107-new-brinde-box"><label>Valor de custo do brinde (R$)</label><input type="number" id="v107-new-brinde-valor" value="0" step="0.01" min="0" oninput="atualizarPreviewV9()"></div></div><div class="multi-order-summary" id="multi-summary-v9"></div><button class="btn primary" style="width:100%;justify-content:center;margin-top:14px" onclick="addVenda()"><i class="ti ti-check"></i>Registrar pedido</button>`};
+
+atualizarPreviewV9=function(){const rec=(window.__novaVendaItensV9||[]).reduce((s,i)=>s+Number(i.receita||0),0),prod=(window.__novaVendaItensV9||[]).reduce((s,i)=>s+Number(i.custo||0),0),frete=Number(document.getElementById('v-frete')?.value||0),emb=Number(document.getElementById('v-custo-emb-v9')?.value||5),taxa=Number(document.getElementById('v-taxa')?.value||0),gift=document.getElementById('v107-new-brinde')?.checked?Number(document.getElementById('v107-new-brinde-valor')?.value||0):0,luc=rec-prod-frete-emb-taxa-gift,el=document.getElementById('multi-summary-v9');if(el)el.innerHTML=`<div><span>Receita</span><b>${fmtVal(rec)}</b></div><div><span>Itens</span><b>${(window.__novaVendaItensV9||[]).reduce((s,i)=>s+Number(i.qtd||1),0)}</b></div><div><span>Custo total</span><b>${fmtVal(prod+frete+emb+taxa+gift)}</b></div><div class="profit"><span>Lucro estimado</span><b>${fmtVal(luc)}</b></div>`};
+
+addVenda=async function(){
+  if(!pedidosSchemaV8){alert('A estrutura de pedidos não está disponível.');return}
+  const itens=(window.__novaVendaItensV9||[]).filter(i=>i.produto_id&&Number(i.receita)>0);if(!itens.length){alert('Adicione pelo menos um produto com valor de venda.');return}
+  const estado=normalizeUFV6(document.getElementById('v-estado')?.value);if(!estado){alert('Selecione o estado do pedido.');return}
+  const data=document.getElementById('v-data').value||hoje(),canal=document.getElementById('v-canal').value,clienteNome=document.getElementById('v-cliente-nome').value.trim(),tel=document.getElementById('v-cliente-tel').value.trim(),cidade=document.getElementById('v-cidade').value.trim(),obs=document.getElementById('v-obs').value.trim(),via=!!document.getElementById('v-via-trafego').checked,frete=Math.max(0,Number(document.getElementById('v-frete').value||0)),emb=Math.max(0,Number(document.getElementById('v-custo-emb-v9').value||5)),taxa=Math.max(0,Number(document.getElementById('v-taxa').value||0)),temBrinde=!!document.getElementById('v107-new-brinde')?.checked,custoBrinde=temBrinde?Math.max(0,Number(document.getElementById('v107-new-brinde-valor')?.value||0)):0,referencia=(obs.match(/#?\d{3,}/)?.[0]||`WEB-${Date.now()}`).replace(/^#(?=\d{10,}$)/,'');
+  const clienteId=await upsertCliente(clienteNome,tel),receita=itens.reduce((s,i)=>s+Number(i.receita||0),0),custoProdutos=itens.reduce((s,i)=>s+Number(i.custo||0),0);
+  let ped=await sb.from('pedidos').insert({referencia,data,canal,cliente_nome:clienteNome||null,cliente_telefone:tel||null,estado,cidade:cidade||null,receita,custo_produtos:custoProdutos,frete,frete_manual:frete,custo_embalagens:emb,taxas:taxa,itens:itens.reduce((s,i)=>s+Number(i.qtd||1),0),via_trafego:via,tem_brinde:temBrinde,custo_brinde:custoBrinde,status:'pago',origem_dados:'CRM V10.7',observacoes:obs||null}).select().single();ped=await checarErro(ped,'Erro ao criar pedido');
+  const linhas=itens.map((it,idx)=>{const p=cache.produtos.find(x=>v107Same(x.id,it.produto_id));return{data,produto_id:it.produto_id,produto_nome:p?.nome||'?',canal,obs,receita:Number(it.receita),custo_prod:Number(it.custo),custo_emb:0,frete:0,taxa:idx===0?taxa:0,anuncio:0,cliente_id:clienteId,estado,cidade:cidade||null,via_trafego:via,pedido_id:ped.id,pedido_ref:referencia,origem_ref:`CRMV107:${referencia}:${idx+1}`,quantidade:Number(it.qtd||1),item_ordem:idx+1,itens_no_pedido:itens.length}});
+  await checarErro(await sb.from('vendas').insert(linhas),'Erro ao salvar itens do pedido');const rr=await sb.rpc('ac_recalcular_pedido_v94',{p_id:Number(ped.id)});if(rr.error)console.warn('[V10.7] recálculo novo pedido',rr.error);fecharModalNovaVenda();await carregarTudo();
+};
+
+// Composição de custos passa a exibir o brinde separadamente.
+renderDonuts=function(rows,gastoAds){
+  const cores=['#d5b347','#9c7cff','#48d17a','#ff6268','#4fe7df','#e48a4e','#e3c65d'];const isOrders=rows.length&&Object.prototype.hasOwnProperty.call(rows[0],'custo_produtos');const porCanal={};rows.forEach(v=>{const k=v.canal||'Outro';porCanal[k]=(porCanal[k]||0)+Number(v.receita||0)});const dadosCanal=Object.entries(porCanal).map(([label,valor],i)=>({label,valor,cor:cores[i%cores.length]})).sort((a,b)=>b.valor-a.valor);
+  const soma={'Produto':0,'Embalagem':0,'Frete':0,'Taxas':0,'Brinde':0,'Tráfego':gastoAds};rows.forEach(v=>{soma.Produto+=Number(isOrders?v.custo_produtos:v.custo_prod||0);soma.Embalagem+=Number(isOrders?v.custo_embalagens:v.custo_emb||0);soma.Frete+=Number(v.frete||0);soma.Taxas+=Number(isOrders?v.taxas:v.taxa||0);if(isOrders)soma.Brinde+=custoBrindeV107(v)});const dadosCusto=Object.entries(soma).filter(([,v])=>v>0).map(([label,valor],i)=>({label,valor,cor:cores[i%cores.length]}));const card=(titulo,dados)=>dados.length?`<div class="donut-card">${cssDonutV9(dados)}<div class="donut-legend"><div style="font-size:9px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">${titulo}</div>${dados.map(d=>`<div class="donut-legend-item"><span class="donut-legend-dot chart-glow-dot" style="background:${d.cor};color:${d.cor}"></span>${d.label}<span class="donut-legend-val">${fmtVal(d.valor)}</span></div>`).join('')}</div></div>`:'';const el=document.getElementById('donuts-resumo');if(el)el.innerHTML=card('Pedidos por canal',dadosCanal)+card('Composição do custo',dadosCusto);
+};
+
+// Foto maior no produto: a miniatura da Yampi já é sincronizada na V10.6.
+const abrirModalProdutoV107Base=abrirModalProduto;
+abrirModalProduto=function(id){
+  abrirModalProdutoV107Base(id);const p=(cache.produtos||[]).find(x=>v107Same(x.id,id));if(!p?.imagem_url)return;const box=document.getElementById('modal-item-conteudo'),head=box?.querySelector('.modal-header');if(!box||!head)return;const hero=document.createElement('div');hero.className='v107-product-hero';hero.innerHTML=`<img src="${escHtml(p.imagem_url)}" alt="${escHtml(p.nome||'Produto')}" onerror="this.parentElement.remove()">`;head.insertAdjacentElement('afterend',hero);
+};
+
+// Explica a diferença entre gasto total e a lista que mostra apenas campanhas ativas.
+const renderAutoV107Base=renderAutoV10;
+renderAutoV10=function(){
+  renderAutoV107Base();const wrap=document.getElementById('v10-source-grid');if(!wrap||document.getElementById('v107-meta-explain'))return;const n=document.createElement('div');n.id='v107-meta-explain';n.className='v107-meta-explain';n.style.gridColumn='1/-1';n.innerHTML='<strong>Como comparar com o Gerenciador da Meta:</strong> o card “Gasto Meta total” soma todo o gasto do período selecionado, inclusive campanhas que depois foram pausadas. A lista de campanhas abaixo mostra somente as que estão ativas agora. Compare sempre o mesmo período e o mesmo nível (campanha).';wrap.appendChild(n);
+};
+
+// Evita o “site ficar preso no zoom” do iOS sem bloquear o zoom por acessibilidade.
+document.documentElement.style.webkitTextSizeAdjust='100%';
+(function(){
+  let t=0;const resetX=()=>{clearTimeout(t);t=setTimeout(()=>{const vv=window.visualViewport;if(!vv||vv.scale<=1.05)window.scrollTo(0,window.scrollY);},100)};
+  window.visualViewport?.addEventListener('resize',resetX,{passive:true});window.visualViewport?.addEventListener('scroll',resetX,{passive:true});window.addEventListener('orientationchange',()=>setTimeout(resetX,280),{passive:true});
+})();
 </script>
 
 </body>
