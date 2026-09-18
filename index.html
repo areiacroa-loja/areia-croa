@@ -2407,17 +2407,10 @@ function formatCountValue(v,format,suffix=''){
   return v.toLocaleString('pt-BR',{maximumFractionDigits:2})+suffix;
 }
 function animarNumeros(root=document){
-  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+  // Sem animação: exibe imediatamente o valor final dos KPIs.
   root.querySelectorAll('.count-up').forEach(el=>{
     const end=Number(el.dataset.count)||0, format=el.dataset.format||'number', suffix=el.dataset.suffix||'';
-    const start=0, duration=Math.min(950,Math.max(520,Math.abs(end)*2));
-    const t0=performance.now();
-    const step=(now)=>{
-      const p=Math.min(1,(now-t0)/duration); const eased=1-Math.pow(1-p,3); const cur=start+(end-start)*eased;
-      el.textContent=formatCountValue(cur,format,suffix);
-      if(p<1) requestAnimationFrame(step); else el.textContent=formatCountValue(end,format,suffix);
-    };
-    requestAnimationFrame(step);
+    el.textContent=formatCountValue(end,format,suffix);
   });
 }
 let interactionsInstalledV4=false;
