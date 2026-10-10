@@ -237,3 +237,10 @@
   const script=document.createElement('script');script.src='clients-crm.js';script.defer=true;
   document.head.append(script);
 })();
+
+// Add the revenue view using the existing canonical financial data.
+(() => {
+  if(typeof document.createElement!=='function')return;
+  const script=document.createElement('script');script.src='brand-dashboard.js';script.defer=true;
+  document.head.append(script);
+})();
