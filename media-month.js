@@ -238,6 +238,13 @@
   document.head.append(script);
 })();
 
+// Dress photographs frame the existing sign-in without changing authentication.
+(() => {
+  if(typeof document.createElement!=='function')return;
+  const script=document.createElement('script');script.src='login-mosaic.js';script.defer=true;
+  document.head.append(script);
+})();
+
 // Add the revenue view using the existing canonical financial data.
 (() => {
   if(typeof document.createElement!=='function')return;
