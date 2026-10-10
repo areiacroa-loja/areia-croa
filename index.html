@@ -842,7 +842,7 @@ body::before{
     <div class="sidebar-section-label">Planejamento</div>
     <nav class="sidebar-nav">
       <button class="side-nav-item" data-tab="metas" onclick="trocarAba('metas')"><i class="ti ti-target-arrow"></i><span>Metas</span></button>
-      <button class="side-nav-item" data-tab="marcos" onclick="trocarAba('marcos')"><i class="ti ti-flag"></i><span>Marcos</span></button>
+      <button class="side-nav-item" data-tab="marcos" onclick="trocarAba('marcos')"><i class="ti ti-flag"></i><span>Conquistas</span></button>
     </nav>
 
     <div class="sidebar-spacer"></div>
@@ -872,7 +872,7 @@ body::before{
     <button class="tab" data-tab="historico" onclick="trocarAba('historico',this)"><i class="ti ti-list"></i>Histórico</button>
     <button class="tab" data-tab="anuncios" onclick="trocarAba('anuncios',this)"><i class="ti ti-speakerphone"></i>Mídia</button>
     <button class="tab" data-tab="metas" onclick="trocarAba('metas',this)"><i class="ti ti-target-arrow"></i>Metas</button>
-    <button class="tab" data-tab="marcos" onclick="trocarAba('marcos',this)"><i class="ti ti-flag"></i>Marcos</button>
+    <button class="tab" data-tab="marcos" onclick="trocarAba('marcos',this)"><i class="ti ti-flag"></i>Conquistas</button>
     <button class="tab" data-tab="clientes" onclick="trocarAba('clientes',this)"><i class="ti ti-address-book"></i>Clientes</button>
   </div>
 
@@ -1027,8 +1027,8 @@ body::before{
     <div class="page-heading">
       <div class="page-heading-copy">
         <div class="page-eyebrow"><i class="ti ti-speakerphone"></i> Performance de mídia</div>
-        <h2>Mídia & aquisição</h2>
-        <p>Gasto real vem da Meta, sessões vêm da Shopify e vendas/receita vêm da Yampi/CRM. Aportes ficam separados como controle de caixa.</p>
+        <h2>Seu investimento, mês a mês</h2>
+        <p>Planeje o orçamento, registre seus aportes e acompanhe o retorno. Cada mês tem seu próprio histórico e fechamento.</p>
       </div>
       <div class="page-actions-v96">
         <button class="btn" id="v10-sync-btn" onclick="sincronizarIntegracoesV10()"><i class="ti ti-refresh"></i>Sincronizar agora</button>
@@ -1143,7 +1143,7 @@ body::before{
     <div class="page-heading compact-heading">
       <div class="page-heading-copy">
         <div class="page-eyebrow"><i class="ti ti-flag"></i> Crescimento acumulado</div>
-        <h2>Marcos</h2>
+        <h2>Conquistas</h2>
         <p>Acompanhe a evolução da receita e os próximos patamares do negócio.</p>
       </div>
     </div>
@@ -1321,7 +1321,7 @@ function trocarAba(id, btn) {
     clientes:['RELACIONAMENTO','Clientes'],
     historico:['REGISTROS','Histórico'],
     metas:['PLANEJAMENTO','Metas'],
-    marcos:['CRESCIMENTO','Marcos']
+    marcos:['CRESCIMENTO','Conquistas']
   };
   const [kicker,title] = titles[id] || ['AREIA CRÔA','Painel'];
   const k = document.getElementById('page-kicker'); if (k) k.textContent = kicker;
@@ -1520,7 +1520,7 @@ function renderMarcos() {
     <div class="marco-hero">
       <div class="marco-hero-label">Faturamento acumulado (todo o período)</div>
       <div class="marco-hero-valor">${fmtVal(totalAcumulado)}</div>
-      <div class="marco-hero-sub">${jaAtingiuTudo ? 'Todos os marcos foram atingidos! 🎉' : `Próximo marco: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div>
+      <div class="marco-hero-sub">${jaAtingiuTudo ? 'Todas as conquistas foram alcançadas! 🎉' : `Próxima conquista: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div>
     </div>`;
   document.getElementById('marcos-resumo').innerHTML = heroHtml;
 
@@ -1536,7 +1536,7 @@ function renderMarcos() {
       </div>
       <div class="marco-corpo">
         <div class="marco-titulo">${fmtVal(tier)}</div>
-        <div class="marco-info">${atingido ? 'Marco atingido' : isAtual ? `Faltam ${fmtVal(tier - totalAcumulado)}` : 'Ainda não iniciado'}</div>
+        <div class="marco-info">${atingido ? 'Conquista alcançada' : isAtual ? `Faltam ${fmtVal(tier - totalAcumulado)}` : 'Ainda não iniciado'}</div>
         <div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div>
       </div>
     </div>`;
@@ -2580,8 +2580,8 @@ function renderTrafegoAds(){
 // Keep the Marcos page, but on the dashboard use the animated six-month chart instead of duplicating the milestone cards.
 function renderMarcos(){
   const totalAcumulado=cache.vendas.reduce((s,v)=>s+Number(v.receita||0),0),proximoTier=MARCOS_TIERS.find(t=>t>totalAcumulado)||MARCOS_TIERS[MARCOS_TIERS.length-1],faltam=Math.max(0,proximoTier-totalAcumulado),ja=totalAcumulado>=MARCOS_TIERS[MARCOS_TIERS.length-1];
-  const hero=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todos os marcos foram atingidos! ✦':`Próximo marco: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;document.getElementById('marcos-resumo').innerHTML=hero;
-  let anterior=0;document.getElementById('marcos-lista').innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Marco atingido':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');
+  const hero=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todas as conquistas foram alcançadas! ✦':`Próxima conquista: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;document.getElementById('marcos-resumo').innerHTML=hero;
+  let anterior=0;document.getElementById('marcos-lista').innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Conquista alcançada':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');
   renderRevenueTrendV4(document.getElementById('filter-mes')?.value||'');setTimeout(()=>animarNumeros(document.getElementById('panel-marcos')),20);
 }
 
@@ -2744,7 +2744,7 @@ function instalarMicroInteracoes(){
 // A página de Marcos continua independente; ela não sobrescreve mais o bloco do dashboard.
 function renderMarcos(){
   const totalAcumulado=cache.vendas.reduce((s,v)=>s+Number(v.receita||0),0),proximoTier=MARCOS_TIERS.find(t=>t>totalAcumulado)||MARCOS_TIERS[MARCOS_TIERS.length-1],faltam=Math.max(0,proximoTier-totalAcumulado),ja=totalAcumulado>=MARCOS_TIERS[MARCOS_TIERS.length-1];
-  const hero=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todos os marcos foram atingidos! ✦':`Próximo marco: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;document.getElementById('marcos-resumo').innerHTML=hero;let anterior=0;document.getElementById('marcos-lista').innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Marco atingido':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');setTimeout(()=>animarNumeros(document.getElementById('panel-marcos')),20);
+  const hero=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todas as conquistas foram alcançadas! ✦':`Próxima conquista: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;document.getElementById('marcos-resumo').innerHTML=hero;let anterior=0;document.getElementById('marcos-lista').innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Conquista alcançada':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');setTimeout(()=>animarNumeros(document.getElementById('panel-marcos')),20);
 }
 
 function renderAll(){
@@ -2893,7 +2893,7 @@ function renderDashboard(){
     <button class="drawer-item" data-tab="historico" onclick="trocarAba('historico');fecharDrawer()"><i class="ti ti-list"></i>Histórico</button>
     <button class="drawer-item" data-tab="anuncios" onclick="trocarAba('anuncios');fecharDrawer()"><i class="ti ti-speakerphone"></i>Mídia</button>
     <button class="drawer-item" data-tab="metas" onclick="trocarAba('metas');fecharDrawer()"><i class="ti ti-target-arrow"></i>Metas</button>
-    <button class="drawer-item" data-tab="marcos" onclick="trocarAba('marcos');fecharDrawer()"><i class="ti ti-flag"></i>Marcos</button>
+    <button class="drawer-item" data-tab="marcos" onclick="trocarAba('marcos');fecharDrawer()"><i class="ti ti-flag"></i>Conquistas</button>
     <button class="drawer-item" data-tab="clientes" onclick="trocarAba('clientes');fecharDrawer()"><i class="ti ti-address-book"></i>Clientes</button>
   </nav>
 </div>
@@ -3167,8 +3167,8 @@ async function carregarAbaV95(id,force=false){
 }
 function renderMarcosV95(){
   const totalAcumulado=pedidosBaseV9().reduce((s,p)=>s+Number(p.receita||0),0),proximoTier=MARCOS_TIERS.find(t=>t>totalAcumulado)||MARCOS_TIERS[MARCOS_TIERS.length-1],faltam=Math.max(0,proximoTier-totalAcumulado),ja=totalAcumulado>=MARCOS_TIERS[MARCOS_TIERS.length-1],box=document.getElementById('marcos-resumo'),lista=document.getElementById('marcos-lista');
-  if(box)box.innerHTML=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todos os marcos foram atingidos! ✦':`Próximo marco: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;
-  let anterior=0;if(lista)lista.innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Marco atingido':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');setTimeout(()=>animarNumeros(document.getElementById('panel-marcos')),20)
+  if(box)box.innerHTML=`<div class="marco-hero"><div class="marco-hero-label">Faturamento acumulado (todo o período)</div><div class="marco-hero-valor">${countSpan(totalAcumulado,'currency')}</div><div class="marco-hero-sub">${ja?'Todas as conquistas foram alcançadas! ✦':`Próxima conquista: <strong style="color:var(--text)">${fmtVal(proximoTier)}</strong> · faltam <strong style="color:var(--accent)">${fmtVal(faltam)}</strong>`}</div></div>`;
+  let anterior=0;if(lista)lista.innerHTML=MARCOS_TIERS.map(tier=>{const atingido=totalAcumulado>=tier,isAtual=!atingido&&totalAcumulado>=anterior,progresso=atingido?100:isAtual?Math.max(0,Math.min(100,(totalAcumulado-anterior)/(tier-anterior)*100)):0,html=`<div class="marco-item ${atingido?'atingido':isAtual?'atual':''}"><div class="marco-icone" style="background:${atingido?'var(--accent-soft)':'var(--surface-alt)'};color:${atingido?'var(--accent)':'var(--text-muted)'}">${atingido?'✓':'R$'}</div><div class="marco-corpo"><div class="marco-titulo">${fmtVal(tier)}</div><div class="marco-info">${atingido?'Conquista alcançada':isAtual?`Faltam ${fmtVal(tier-totalAcumulado)}`:'Ainda não iniciado'}</div><div class="marco-bar"><div class="marco-bar-fill" style="width:${progresso}%"></div></div></div></div>`;anterior=tier;return html}).join('');setTimeout(()=>animarNumeros(document.getElementById('panel-marcos')),20)
 }
 
 // Renderiza só o que está visível. Nada de reconstruir 9 abas a cada mudança.
@@ -3743,7 +3743,7 @@ perfLoadV95=function(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   const p=document.querySelector('#panel-anuncios .page-heading-copy p');
-  if(p)p.textContent='Planeje campanhas e registre cada aporte de mídia separadamente. O financeiro usa a soma real dos depósitos do período.';
+  if(p)p.textContent='Planeje o orçamento, registre seus aportes e acompanhe o retorno. Cada mês tem seu próprio histórico e fechamento.';
 });
 </script>
 
@@ -4100,7 +4100,7 @@ renderDashboard=function(){
 
 document.addEventListener('DOMContentLoaded',()=>{
   const heading=document.querySelector('#panel-anuncios .page-heading-copy h2');
-  if(heading)heading.textContent='Investimentos do mês';
+  if(heading)heading.textContent='Seu investimento, mês a mês';
 });
 </script>
 
@@ -4598,7 +4598,7 @@ perfLoadV95=function(){
 };
 
 document.addEventListener('DOMContentLoaded',()=>{
-  const h=document.querySelector('#panel-anuncios .page-heading-copy h2');if(h)h.textContent='Mídia & aquisição';
+  const h=document.querySelector('#panel-anuncios .page-heading-copy h2');if(h)h.textContent='Seu investimento, mês a mês';
 });
 </script>
 
@@ -5570,5 +5570,7 @@ document.documentElement.style.webkitTextSizeAdjust='100%';
 })();
 </script>
 
+<link rel="stylesheet" href="media-month.css">
+<script src="media-month.js"></script>
 </body>
 </html>
