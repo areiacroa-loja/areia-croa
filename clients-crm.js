@@ -75,7 +75,7 @@
       // The old webhook tagged checkout signups as abandoned carts too.
       // Only explicit/manual cart tags supplement actual cart records.
       p.taggedCart=!p.carts.length&&p.clients.some(c=>c.tag==='carrinho_abandonado'&&(!/yampi/i.test(c.observacoes||'')||/carrinho abandonado/i.test(c.observacoes||'')))&&!p.bought;
-      p.hasCart=!!p.cart||p.taggedCart;
+      p.hasCart=!!p.cart;
       p.cartTotal=p.openCarts.reduce((s,c)=>s+money(c.total),0);
     });
     return {people,buyers:people.filter(p=>p.bought),abandoned:people.filter(p=>p.hasCart),other:people.filter(p=>!p.bought&&!p.hasCart)};
