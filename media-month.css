@@ -1,31 +1,41 @@
-#panel-anuncios{--media-muted:#a5aaa5}
-#panel-anuncios>.page-heading{background:radial-gradient(ellipse at top right,#36301c 0,transparent 65%),#141615;padding:28px;border:1px solid #35382e}
-#panel-anuncios .page-heading p{max-width:640px;color:var(--media-muted);font-size:13px;line-height:1.7}
-#panel-anuncios .toolbar-card{flex-wrap:wrap;gap:12px;padding:16px 20px}
-.media-plan{border:1px solid #414335;border-radius:22px;background:linear-gradient(120deg,#20241c,#141715);padding:24px;margin-bottom:18px}
-.media-plan-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
-.media-plan-head h3{font-size:20px;margin:5px 0 0;letter-spacing:-.03em}
-.media-eyebrow{color:#d6bd71;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
-.media-plan-actions{display:flex;gap:8px;flex-wrap:wrap}
-.media-plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
-.media-plan-grid article{border-left:1px solid #3a3e31;padding-left:18px;min-width:0}
-.media-plan-grid article:first-child{border-left:0;padding-left:0}
-.media-plan-grid span,.media-plan-grid small{display:block;color:var(--media-muted);font-size:11px;line-height:1.5}
-.media-plan-grid strong{display:block;font:800 clamp(20px,2.3vw,30px)/1.25 var(--font-display);margin:8px 0;color:#f2efdc;letter-spacing:-.04em}
-.media-plan-grid .media-exceeded strong{color:#ff9595}
-.media-progress{height:7px;background:#34392e;border-radius:20px;overflow:hidden;margin-top:24px}
-.media-progress>span{display:block;height:100%;background:#d7bc66;border-radius:20px;transition:width .25s}
-.media-plan-foot{display:flex;justify-content:space-between;gap:12px;color:var(--media-muted);font-size:11px;line-height:1.6;margin-top:10px}
-#panel-anuncios .section-shell{padding:22px;border-color:#30342f;margin-bottom:18px}
-#panel-anuncios .section-header h3{font-size:17px}
-#panel-anuncios .section-header p,#panel-anuncios .v99-close-note{font-size:11px;line-height:1.6;color:var(--media-muted)}
-#panel-anuncios .v99-metric small{color:var(--media-muted);font-size:10px}
-#panel-anuncios .v99-metric span{font-size:10px;color:#b7bbb2}
-#panel-anuncios .v99-metric strong{font-size:24px}
-#panel-anuncios .v99-month-grid{gap:12px}
-#panel-anuncios .v99-ledger-shell{border-color:#414335}
-.media-notice{padding:14px 18px;border:1px solid #756234;background:#282416;border-radius:12px;color:#f1d893;margin:0 0 16px;font-size:12px;line-height:1.6}
-.media-period-label{font-size:11px;color:var(--media-muted)}
-#media-month-picker{width:160px;color-scheme:dark}
-#panel-marcos .marco-hero{background:radial-gradient(ellipse at top right,#3a3420,transparent 70%),#171a16;border-color:#414335}
-@media(max-width:760px){.media-plan{padding:18px}.media-plan-head{align-items:flex-start;flex-direction:column}.media-plan-grid{grid-template-columns:1fr 1fr;gap:20px 12px}.media-plan-grid article:nth-child(3){border-left:0;padding-left:0}.media-plan-foot{flex-direction:column;gap:4px}#panel-anuncios>.page-heading{padding:20px}#panel-anuncios .section-shell{padding:16px}#panel-anuncios .v99-metric strong{font-size:20px}}
+/* CRM light theme: restrained surfaces, readable typography and progressive disclosure. */
+:root{color-scheme:light;--bg:#f6f7f9;--surface:#fff;--surface-alt:#f8fafc;--surface-2:#f1f4f7;--border:#dfe4ea;--border-soft:#e9edf1;--text:#202b3a;--text-muted:#637083;--text-faint:#697586;--accent:#285e52;--accent-dark:#204d43;--accent-soft:#edf5f1;--success:#18734b;--success-soft:#ecf7f0;--danger:#b73838;--danger-soft:#fff1f1;--purple:#695292;--purple-soft:#f4f0fa;--neon-gold:#285e52;--cyan:#276d89;--lime:#18734b;--glass:#fff;--font-display:Arial,sans-serif;--r-sm:6px;--r-md:8px;--r-lg:10px;--shadow-card:none;--shadow-pop:0 12px 40px #18253522}
+html,body{background:#f6f7f9!important;color:var(--text);font-family:Arial,sans-serif!important}
+body::before,.desktop-sidebar::after,.topbar::after,.dashboard-intro::before,.dashboard-intro::after,.page-heading::before,.page-heading::after,.section-shell::before,.card::before,.card::after,.donut-card::before,.ad-investment::before,.goal-card::before,.monthly-panel::before{display:none!important}
+.app{width:100%;margin:0;gap:0;grid-template-columns:220px minmax(0,1fr)}
+.workspace{padding:0 28px 32px;max-width:1600px}
+.desktop-sidebar{top:0;height:100dvh;border:0;border-right:1px solid var(--border);border-radius:0!important;background:#fff!important;box-shadow:none!important;padding:24px 14px}
+.sidebar-brand{padding-bottom:26px}.sidebar-home-logo,.topbar-brand img{filter:brightness(.25)!important}.sidebar-brand-copy strong{color:#263a34!important;letter-spacing:.02em}.sidebar-section-label{color:#7c8795!important;letter-spacing:.06em;font-size:10px}
+.side-nav-item,.drawer-item{color:#526071!important;border-radius:6px!important;font-size:13px!important;font-weight:500!important;box-shadow:none!important;background:transparent!important}
+.side-nav-item.active,.drawer-item.active{background:#edf5f1!important;color:#285e52!important;border-color:transparent!important;font-weight:600!important}.side-nav-item:hover,.drawer-item:hover{background:#f3f5f7!important}
+.topbar{background:#fff!important;border:0!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;box-shadow:none!important;margin:0 -28px 24px;padding:18px 28px!important;min-height:72px}
+.topbar h1{font-size:20px!important;font-weight:600!important}.topbar .eyebrow,.topbar-label{display:none!important}
+:is(.dashboard-intro,.page-heading,.section-shell,.toolbar-card,.card,.donut-card,.ad-investment,.cliente-card,.marco-hero,.growth-card,.monthly-panel,.goal-card,.goal-stat,.pnl-line,.v99-metric,.v10-source-card,.v10-campaign-row,.v106-yampi-status-shell,.modal,.modal-content,.modal-box,.drawer,.login-card){background:#fff!important;border-color:var(--border)!important;border-radius:8px!important;box-shadow:none!important;color:var(--text)!important;backdrop-filter:none!important}
+:is(.card-value,.monthly-big,.v99-metric strong,.v10-source-card strong,.v10-campaign-spend,.v10-campaign-info strong){background:none!important;color:#263445!important;-webkit-text-fill-color:currentColor!important;text-shadow:none!important}
+h1,h2,h3,h4,.modal-title{color:#202b3a!important;letter-spacing:-.02em!important;font-weight:600!important}p,small,.form-note,.modal-subtitle{color:#697586!important}
+.btn{background:#fff!important;color:#425166!important;border:1px solid #dce2e8!important;border-radius:6px!important;box-shadow:none!important;transform:none!important;font-size:12px!important;font-weight:600!important;min-height:36px;padding:9px 13px!important}
+.btn:hover{background:#f5f7f9!important}.btn.primary,.btn.success{background:#285e52!important;color:#fff!important;border-color:#285e52!important}.btn.primary:hover{background:#204d43!important}.btn.danger{color:#b73838!important;background:#fff!important}.btn:disabled{opacity:.45}.ui-ripple{display:none}
+input,select,textarea{color:#263445!important;background:#fff!important;border:1px solid #dce2e8!important;border-radius:6px!important;color-scheme:light!important;box-shadow:none!important;font-size:13px!important}input:focus,select:focus,textarea:focus{outline:2px solid #b5d5c8!important;outline-offset:1px}
+table{background:#fff!important;color:#344054!important}th{background:#f8fafb!important;color:#697586!important;font-size:11px!important;font-weight:600!important}td{border-color:#edf0f3!important;font-size:12px!important}tr:hover td{background:#f8fafb!important}
+.modal-overlay{background:#1d293955!important}.modal-content,.modal-box{box-shadow:0 20px 60px #18253533!important}.modal-header,.modal-actions{border-color:#e7ebef!important}
+:is(.badge,.pill,.v99-status,.result-status,.v106-yampi-pill){box-shadow:none!important;text-shadow:none!important}
+#panel-anuncios{--media-muted:#697586}
+#panel-anuncios>.page-heading{padding:0 0 20px!important;border:0!important;background:transparent!important;display:flex;align-items:center;gap:20px}
+#panel-anuncios>.page-heading h2{font-size:24px!important;margin:0!important}
+#panel-anuncios>.page-heading p{font-size:13px!important;margin:8px 0 0!important;line-height:1.5}
+#panel-anuncios>.page-heading .eyebrow,#panel-anuncios>.page-heading .section-eyebrow{display:none!important}
+#panel-anuncios .toolbar-card{padding:12px 16px;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+#panel-anuncios .section-shell{padding:20px;border-color:var(--border)!important;margin-bottom:16px}
+#panel-anuncios .section-header h3{font-size:15px!important}.section-header p{font-size:12px!important;line-height:1.5}
+.media-plan{border:1px solid var(--border);border-radius:8px;background:#fff;padding:22px;margin-bottom:16px}
+.media-plan-head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}.media-plan-head h3{font-size:18px;margin:0}.media-eyebrow{display:none}.media-plan-actions{display:flex;gap:8px;flex-wrap:wrap}
+.media-plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}.media-plan-grid article{min-width:0;border-right:1px solid #edf0f3;padding-right:16px}.media-plan-grid article:last-child{border:0}.media-plan-grid span,.media-plan-grid small{display:block;color:#697586;font-size:12px;line-height:1.5}.media-plan-grid strong{display:block;font:600 clamp(21px,2vw,28px)/1.3 Arial,sans-serif;color:#263445;margin:8px 0}.media-plan-grid small{font-size:11px}.media-plan-grid .media-exceeded strong{color:#b73838}
+.media-progress{height:4px;background:#edf0f3;border-radius:3px;overflow:hidden;margin-top:24px}.media-progress>span{display:block;height:100%;background:#578574}.media-plan-foot{display:flex;justify-content:space-between;gap:12px;color:#697586;font-size:11px;margin-top:10px}
+.media-notice{padding:12px 16px;border:1px solid #eedba6;background:#fffbef;border-radius:6px;color:#806223;margin-bottom:16px;font-size:12px}.media-period-label{font-size:12px;color:#697586}#media-month-picker{width:158px}
+#panel-anuncios .v99-month-shell{border:0!important;background:transparent!important;padding:0!important}#panel-anuncios .v99-month-shell .section-header{padding:4px 0 12px}#panel-anuncios .v99-month-shell .section-header p,#v99-close-note{display:none!important}#panel-anuncios .v99-metric{padding:15px!important}#panel-anuncios .v99-metric span{color:#697586!important;font-size:11px!important;text-transform:none!important;letter-spacing:0!important}#panel-anuncios .v99-metric strong{font-size:23px!important}#panel-anuncios .v99-metric small{font-size:11px!important}
+#panel-anuncios .v99-metric:nth-child(1),#panel-anuncios .v99-metric:nth-child(2),#panel-anuncios .v99-metric:nth-child(3),#panel-anuncios .v99-metric:nth-child(7),#panel-anuncios .v99-metric:nth-child(8){display:none}#panel-anuncios .v99-month-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#v99-ledger-summary{display:none!important}#panel-anuncios .v99-ledger-shell .section-header .btn{display:none!important}
+.crm-details{border:1px solid #dfe4ea;border-radius:8px;background:#fff;margin-bottom:12px}.crm-details>summary{cursor:pointer;padding:17px 20px;font-size:13px;font-weight:600;color:#425166;list-style-position:inside}.crm-details[open]>summary{border-bottom:1px solid #edf0f3}.crm-details>.section-shell{border:0!important;margin:0!important}.crm-details .section-header{margin-bottom:12px}
+.goal-ring::before{background:#fff!important;box-shadow:none!important}.goal-ring{box-shadow:none!important}.card-mini-fill{box-shadow:none!important}
+@media(max-width:1000px){.app{display:block}.workspace{padding:0 16px 24px}.topbar{margin:0 -16px 20px;padding:16px!important}.desktop-sidebar{display:none}}
+@media(max-width:700px){.media-plan{padding:18px}.media-plan-head{align-items:flex-start;flex-direction:column}.media-plan-grid{grid-template-columns:1fr 1fr;gap:20px}.media-plan-grid article:nth-child(2){border:0}.media-plan-foot{flex-direction:column;gap:5px}#panel-anuncios>.page-heading{align-items:flex-start;flex-direction:column;gap:14px}#panel-anuncios .v99-month-grid{grid-template-columns:1fr 1fr 1fr}#panel-anuncios .v99-metric{padding:10px!important}#panel-anuncios .v99-metric strong{font-size:18px!important}#panel-anuncios .v99-metric small{display:none}.media-plan-actions .btn{font-size:11px!important}}

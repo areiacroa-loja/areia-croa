@@ -196,3 +196,37 @@
 
   popularSelectMes();
 })();
+
+/* Present the daily workflow first; keep advanced reports available on demand. */
+(() => {
+  function simplifyMedia() {
+    const panel = document.getElementById('panel-anuncios');
+    if (!panel) return;
+    const heading = panel.querySelector('.page-heading');
+    if (heading) {
+      const title = heading.querySelector('h2'), description = heading.querySelector('p');
+      if (title) title.textContent = 'Investimento em mídia';
+      if (description) description.textContent = 'Controle o orçamento e os aportes de cada mês.';
+      const eyebrow = title?.previousElementSibling;
+      if (eyebrow && !eyebrow.querySelector('button')) eyebrow.hidden = true;
+    }
+    const ledger = panel.querySelector('.v99-ledger-shell');
+    if (ledger) {
+      const title = ledger.querySelector('h3'), description = ledger.querySelector('.section-header p');
+      if (title) title.textContent = 'Histórico de aportes';
+      if (description) description.textContent = 'Depósitos feitos na plataforma de anúncios.';
+    }
+    const labels = {'Dados automáticos':'Indicadores detalhados','Campanhas Meta':'Campanhas da Meta','Carrinhos abandonados':'Carrinhos abandonados'};
+    panel.querySelectorAll('.section-shell').forEach(section => {
+      const title = section.querySelector('h3')?.textContent.trim();
+      if (!labels[title] || section.parentElement.tagName === 'DETAILS') return;
+      const details = document.createElement('details'); details.className='crm-details';
+      const summary = document.createElement('summary'); summary.textContent=labels[title];
+      section.before(details); details.append(summary,section);
+    });
+  }
+  const originalRender = renderAnuncios;
+  renderAnuncios = function() { originalRender(); simplifyMedia(); };
+  document.addEventListener('DOMContentLoaded', simplifyMedia);
+  simplifyMedia();
+})();

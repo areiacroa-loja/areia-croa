@@ -10,7 +10,7 @@ function setup(){
   const noop=()=>{};
   const c={console,Date,Number,Set,Option:function(text,value){this.text=text;this.value=value},
     cache:{metas:[{id:1,ano:2026,mes:9,investimento_previsto:500,faturamento_previsto:3000}],aportes:[],fechamentosInvestimento:[]},
-    document:{getElementById:id=>fields[id]||null,querySelector:()=>null},
+    document:{addEventListener:noop,getElementById:id=>fields[id]||null,querySelector:()=>null},
     popularSelectMes:()=>{select.innerHTML='<option value=""></option><option value="2026-09"></option>';},
     fechamentoMesSchemaV99:true,carregarFechamentosV99:noop,renderAnuncios:noop,
     resumoMesInvestimentoV99:()=>({total:150,vendas:150,branding:0,receita:450,compras:3,sessoes:0,roas:3,cpa:50}),
