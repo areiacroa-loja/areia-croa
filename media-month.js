@@ -230,3 +230,10 @@
   document.addEventListener('DOMContentLoaded', simplifyMedia);
   simplifyMedia();
 })();
+
+// Load the contact workspace after legacy globals are available.
+(() => {
+  if(typeof document.createElement!=='function')return;
+  const script=document.createElement('script');script.src='clients-crm.js';script.defer=true;
+  document.head.append(script);
+})();
