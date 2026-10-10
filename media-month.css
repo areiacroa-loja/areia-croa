@@ -51,3 +51,8 @@ table{background:#fff!important;color:#344054!important}th{background:#f8fafb!im
 #v99-month-status{background:transparent!important;border:0!important;box-shadow:none!important}.v99-status-pill{font-size:10px!important;font-weight:500!important}.topbar-status .status-dot{box-shadow:none!important;background:#578574!important}
 .v10-conn-pill{color:#31735d!important;background:#f0f7f3!important;border-color:#dbe9e2!important;box-shadow:none!important}.v10-conn-pill i{box-shadow:none!important}
 @media(max-width:700px){#panel-anuncios>.page-heading{flex-direction:column!important;align-items:flex-start!important}.topbar-status{display:none!important}.page-actions-v96{justify-content:flex-start!important}}
+/* Consistent contrast for ledger, forms and secondary reports. */
+.login-page{background:#f6f7f9!important}.login-page::before,.login-page::after{display:none!important}
+:is(.form-grid,.traffic-origin-box,.abandon-kpi){background:#fff!important;border-color:#e2e7ec!important;box-shadow:none!important;color:#526071!important;border-radius:8px!important}
+.v99-ledger-value,.v99-ledger-row.sales .v99-ledger-value,.v99-ledger-row.branding .v99-ledger-value{color:#263445!important;font-size:16px!important;font-weight:600!important}
+:is(.abandon-kpi,.traffic-origin-box) :is(strong,b){color:#263445!important}.card-mini-track,.geo-rank-bar-v9{background:#edf0f3!important}.divider{background:#e7ebef!important}.geo-rank-n-v9{background:#f1f4f7!important;color:#526071!important}.geo-rank-fill-v9{background:#578574!important;box-shadow:none!important}
