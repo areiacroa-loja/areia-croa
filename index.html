@@ -4959,7 +4959,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   function instalarAbaContaMetaV104(){
     if(document.getElementById('panel-conta-meta'))return;
-    const app=document.getElementById('app-root');if(!app)return;
+    const app=document.querySelector('#app-root .workspace')||document.getElementById('app-root');if(!app)return;
     const panel=document.createElement('div');panel.id='panel-conta-meta';panel.className='panel';panel.innerHTML=`<div class="page-heading"><div class="page-heading-copy"><div class="page-eyebrow"><i class="ti ti-wallet"></i> Financeiro Meta</div><h2>Conta de anúncios</h2><p>Saldo, gasto acumulado, limite e modelo de cobrança consultados diretamente na sua conta Meta.</p></div></div><div id="v104-meta-account"></div>`;
     const footer=app.querySelector('.app-footer-verse');footer?app.insertBefore(panel,footer):app.appendChild(panel);
 
@@ -5581,5 +5581,7 @@ document.documentElement.style.webkitTextSizeAdjust='100%';
 <script src="media-month.js"></script>
 <script src="payment-fees.js"></script>
 <script src="payment-fees-ui.js"></script>
+<link rel="stylesheet" href="erp-design.css">
+<script src="erp-design.js"></script>
 </body>
 </html>
