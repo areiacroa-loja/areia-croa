@@ -8,3 +8,13 @@ test('card without interest data is visibly pending',()=>{const r=ctx.paymentBre
 
 
 test('Yampi card brands and string payment lists identify cards',()=>{for(const r of [{payments:['visa']},{transactions:{data:[{status:'paid',payment:{data:{alias:'mastercard',is_credit_card:true}}}]}}]){const f=ctx.paymentBreakdownV108({...r,value_total:180.17,value_tax:23.42});assert.equal(f.pagamento_metodo,'credit_card');assert.equal(f.taxa_gateway,9.98);}});
+const procSource=src.slice(src.indexOf('async function processPaidOrder'),src.indexOf('async function recoverYampiOrder'));
+test('replayed webhook keeps exact CSV cents in header and line revenues',async()=>{
+ const writes=[];const existing={id:7,origem_dados:'Yampi webhook',receita:153.61,taxas_origem:'csv',pagamento_metodo:'pix',parcelas:1,juros_parcelamento:0,taxa_gateway:2.53,taxa_yampi:3.84,checkout_yampi:true,liquido_gateway:151.08,taxas:6.37,frete:20,custo_embalagens:5,taxas_revisao:null};
+ const c={money:ctx.money,dateOnly:()=> '2026-10-21',cleanPhone:()=>'',isPaidTraffic:()=>false,findOrCreateClient:async()=>null,matchProduct:()=>({id:1,nome:'Produto',custo:50}),itemTitle:()=> 'Produto',allocateRevenue:(items,total)=>[total],markRecoveredCartForPaidOrder:async()=>null,logEvent:async()=>{},PACKAGING_COST:5,
+ sb:{from(table){const q={select(){return q},eq(){return q},order(){return q},limit(){return Promise.resolve({data:table==='pedidos'?[existing]:[]})},update(row){writes.push({table,row});return q},insert(row){writes.push({table,row});return q},then(resolve){return Promise.resolve({data:table==='produtos'?[{id:1,nome:'Produto',custo:50}]:[],error:null}).then(resolve)}};return q},rpc:async()=>({error:null})}};
+ vm.createContext(c);vm.runInContext(stripTypeScriptTypes(helper+'\n'+procSource),c);
+ await c.processPaidOrder({event:'order.paid',resource:{id:10,number:'TEST',value_total:153.62,value_tax:0,payments:['pix'],customer:{data:{}},shipping_address:{data:{}},items:{data:[{id:1,quantity:1}]}}});
+ const header=writes.find(w=>w.table==='pedidos').row,line=writes.find(w=>w.table==='vendas').row;
+ assert.equal(header.receita,153.61);assert.equal(header.taxas,6.37);assert.equal(header.taxa_gateway,2.53);assert.equal(line.receita,153.61);assert.equal(line.taxa,6.37);assert.equal(header.frete,20);
+});

@@ -697,7 +697,7 @@ async function processPaidOrder(body: any) {
     return { item, product: p, qty, cost: money(cost), title: p?.nome || itemTitle(item) };
   });
   const custoProdutos = money(enriched.reduce((s: number, x: any) => s + x.cost, 0));
-  const revenues = allocateRevenue(items, orderTotal);
+
 
   const { data: existingOrders, error: exErr } = await sb
     .from("pedidos")
@@ -725,6 +725,8 @@ async function processPaidOrder(body: any) {
   const calculatedFees=paymentBreakdownV108(r);
   const keepReconciled=existing&&['csv','informado'].includes(existing.taxas_origem)&&Math.abs(Number(existing.receita)-orderTotal)<0.015;
   const feeFields=keepReconciled?Object.fromEntries(['pagamento_metodo','parcelas','juros_parcelamento','taxa_gateway','taxa_yampi','checkout_yampi','taxas_origem','liquido_gateway','taxas','taxas_revisao'].map(k=>[k,existing[k]])):calculatedFees;
+  const accountingTotal=keepReconciled?Number(existing.receita):orderTotal;
+  const revenues=allocateRevenue(items,accountingTotal);
   const header = {
     referencia: reference,
     data,
@@ -734,7 +736,7 @@ async function processPaidOrder(body: any) {
     cliente_telefone: clienteTelefone,
     estado,
     cidade,
-    receita: orderTotal,
+    receita: accountingTotal,
     custo_produtos: custoProdutos,
     frete: existing ? existing.frete : 0,
     custo_embalagens: existing?.custo_embalagens ?? PACKAGING_COST,
