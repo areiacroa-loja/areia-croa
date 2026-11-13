@@ -5512,7 +5512,7 @@ abrirEditarPedidoV96=function(id){
 };
 
 salvarEditarPedidoV96=async function(id){
-  const p=(cache.pedidos||[]).find(x=>v107Same(x.id,id));if(!p)return;
+  const p=(cache.pedidos||[]).find(x=>v107Same(x.id,id));if(!p)return false;
   const estado=normalizeUFV6(document.getElementById('v96-ped-estado')?.value),freteEl=document.getElementById('v107-ped-frete'),frete=Math.max(0,Number(freteEl?.value||0)),emb=Math.max(0,Number(document.getElementById('v107-ped-emb')?.value||5));
   const temBrinde=!!document.getElementById('v107-ped-brinde')?.checked,custoBrinde=temBrinde?Math.max(0,Number(document.getElementById('v107-ped-brinde-valor')?.value||0)):0;
   const temLedger=fretesPedidoV107(id).length>0,auto=freteAutomaticoV107(id);let freteManual;
@@ -5530,12 +5530,12 @@ salvarEditarPedidoV96=async function(id){
     const result=await query.select('id');
     if(result.error)throw result.error;
     if(!result.data?.length)throw new Error('O pedido foi atualizado em outra sessão. Reabra para conferir os dados.');
-  }catch(error){alert(error.message||'Não foi possível salvar o pedido.');return;}
+  }catch(error){alert(error.message||'Não foi possível salvar o pedido.');return false;}
 
   const child={data:row.data,canal:row.canal,estado:row.estado,cidade:row.cidade,via_trafego:row.via_trafego};
   const cr=await sb.from('vendas').update(child).eq('pedido_id',id);if(cr.error)console.warn('[V10.7] linhas do pedido',cr.error);
   const rr=await sb.rpc('ac_recalcular_pedido_v94',{p_id:Number(id)});if(rr.error)console.warn('[V10.7] recálculo',rr.error);
-  fecharModalItem();await carregarResumoV95({silent:true});await carregarVendasV95(true);renderHistorico();renderVendas();renderDashboard();perfSaveV95();
+  fecharModalItem();await carregarResumoV95({silent:true});await carregarVendasV95(true);renderHistorico();renderVendas();renderDashboard();perfSaveV95();return true;
 };
 
 abrirModalPedidoV9=function(id){

@@ -30,10 +30,11 @@ atualizarPreviewV9=function(){
 const oldOpenNew=abrirModalNovaVenda;
 abrirModalNovaVenda=async function(){const r=await oldOpenNew();if(el('fee-new-fees')){wire('fee-new',()=>(window.__novaVendaItensV9||[]).reduce((s,i)=>s+Number(i.receita||0),0),null,atualizarPreviewV9);el('v-canal')?.addEventListener('change',()=>{el('fee-new-yampi').value=el('v-canal').value==='Yampi'?'yes':'no';atualizarPreviewV9();});}return r;};
 const oldEdit=abrirEditarPedidoV96;
-abrirEditarPedidoV96=function(id){oldEdit(id);const p=pedidosBaseV9().find(x=>String(x.id)===String(id));if(!p)return;const content=el('modal-item-conteudo'),actions=content.querySelector('.modal-actions');actions.insertAdjacentHTML('beforebegin',paymentFields('fee-edit',p));wire('fee-edit',()=>Number(p.receita||0),p);};
+abrirEditarPedidoV96=function(id){oldEdit(id);const p=(cache.pedidos||[]).find(x=>String(x.id)===String(id));if(!p)return;const content=el('modal-item-conteudo'),actions=content.querySelector('.modal-actions');actions.insertAdjacentHTML('beforebegin',paymentFields('fee-edit',p));wire('fee-edit',()=>Number(p.receita||0),p);};
 const oldSaveFees=salvarEditarPedidoV96;
 salvarEditarPedidoV96=async function(id){
- await oldSaveFees(id);
+ const saved=await oldSaveFees(id);
+ if(saved===false)return;
  const p=(cache.pedidos||[]).find(x=>String(x.id)===String(id));
  if(!p||p.taxas_origem==='legado')return;
  const q=await sb.from('vendas').select('id,item_ordem').eq('pedido_id',id).order('item_ordem',{ascending:true}).order('id',{ascending:true});
@@ -43,7 +44,7 @@ salvarEditarPedidoV96=async function(id){
  await carregarVendasV95(true);
 };
 const oldDetail=abrirModalPedidoV9;
-abrirModalPedidoV9=function(id){oldDetail(id);const p=pedidosBaseV9().find(x=>String(x.id)===String(id));if(!p)return;const total=el('modal-venda-conteudo').querySelector('.modal-total');total.insertAdjacentHTML('beforebegin',`<div class="modal-section-label">Detalhamento das taxas</div><div class="modal-row"><span>Gateway (${escHtml(p.pagamento_metodo||'não informado')})</span><span>${p.taxa_gateway===null||p.taxa_gateway===undefined?'Pendente':fmtVal(p.taxa_gateway)}</span></div><div class="modal-row"><span>Juros repassados ao processador</span><span>${fmtVal(p.juros_parcelamento||0)}</span></div><div class="modal-row"><span>Comissão Yampi (2,5%)</span><span>${fmtVal(p.taxa_yampi||0)}</span></div><div class="v107-freight-note">${escHtml(p.taxas_revisao||('Origem das taxas: '+(p.taxas_origem||'legado')))}. A comissão Yampi é cobrada semanalmente e já está incluída no custo do pedido.</div>`);};
+abrirModalPedidoV9=function(id){oldDetail(id);const p=(cache.pedidos||[]).find(x=>String(x.id)===String(id));if(!p)return;const total=el('modal-venda-conteudo').querySelector('.modal-total');total.insertAdjacentHTML('beforebegin',`<div class="modal-section-label">Detalhamento das taxas</div><div class="modal-row"><span>Gateway (${escHtml(p.pagamento_metodo||'não informado')})</span><span>${p.taxa_gateway===null||p.taxa_gateway===undefined?'Pendente':fmtVal(p.taxa_gateway)}</span></div><div class="modal-row"><span>Juros repassados ao processador</span><span>${fmtVal(p.juros_parcelamento||0)}</span></div><div class="modal-row"><span>Comissão Yampi (2,5%)</span><span>${fmtVal(p.taxa_yampi||0)}</span></div><div class="v107-freight-note">${escHtml(p.taxas_revisao||('Origem das taxas: '+(p.taxas_origem||'legado')))}. A comissão Yampi é cobrada semanalmente e já está incluída no custo do pedido.</div>`);};
 const oldDashboard=renderDashboard;
 renderDashboard=function(){const r=oldDashboard();const box=el('cards-resumo');if(box){el('fee-pending-warning')?.remove();const pending=pedidosBaseV9().filter(p=>p.taxas_origem==='pendente'||p.taxas_revisao);if(pending.length)box.insertAdjacentHTML('beforebegin',`<div id="fee-pending-warning" class="v107-freight-note">${pending.length} pedido(s) com taxas a revisar. O lucro desses pedidos ainda pode mudar. Abra o pedido para conferir.</div>`);}return r;};
 })();

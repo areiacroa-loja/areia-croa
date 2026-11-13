@@ -28,4 +28,18 @@ from public.pedidos p where v.pedido_id=p.id and p.meta_campaign_id is not null;
 -- Preserve campaigns explicitly marked as sales. Everything else is branding.
 update public.meta_campaign_classification
 set tipo='branding',updated_at=now() where tipo is distinct from 'vendas';
+
+-- Replay only a definitive latest cancellation already verified by the webhook.
+-- Both the order reference and Yampi ID must identify the existing paid order.
+with latest as (
+  select distinct on (resource_id) resource_id,reference,received_at,status,metadata
+  from public.yampi_webhook_events where event like 'order.%'
+  order by resource_id,received_at desc,event_key desc
+)
+update public.pedidos p set status='cancelado',
+  observacoes=concat_ws(' · ',p.observacoes,'Cancelamento Yampi confirmado; evento recebido em '||e.received_at::text)
+from latest e
+where p.referencia=e.reference and p.yampi_order_id=e.resource_id and p.status='pago'
+  and lower(coalesce(p.origem_dados,'')) like '%yampi%'
+  and e.status='ignored_order_not_paid' and e.metadata->>'order_status_alias'='cancelled';
 commit;
