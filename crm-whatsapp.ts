@@ -56,7 +56,9 @@ const db=createClient(URL_BASE,SERVICE_KEY,{auth:{persistSession:false}});
 const WABA=Deno.env.get('YCLOUD_WABA_ID')||'1861122401153826';
 const FROM=Deno.env.get('YCLOUD_WHATSAPP_FROM')||'';
 const API_KEY=Deno.env.get('YCLOUD_API_KEY')||'';
-const WEBHOOK_SECRET=Deno.env.get('YCLOUD_WEBHOOK_SECRET')||'';
+const WEBHOOK_SECRET=(Deno.env.get('YCLOUD_WEBHOOK_SECRET')||'').trim();
+const WEBHOOK_ID=Deno.env.get('YCLOUD_WEBHOOK_ID')||'6af79e06a9e8a64e618a7918';
+let webhookCache:{secret:string,time:number}|null=null;
 const cors={'Access-Control-Allow-Origin':'https://areia-croa.vercel.app','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'};
 function result(data:any,status=200){return new Response(JSON.stringify(data),{status,headers:{...cors,'Content-Type':'application/json'}});}
 function checked(r:any){if(r.error)throw Error('Não foi possível salvar ou consultar o CRM.');return r.data;}
@@ -69,6 +71,14 @@ async function yc(path:string,method='GET',body?:any){
  const payload=await response.json().catch(()=>null);
  if(!response.ok){const e:any=Error('YCloud recusou a solicitação ('+response.status+').');e.httpStatus=response.status;throw e;}
  return payload;
+}
+async function signingSecret(){
+ if(webhookCache&&Date.now()-webhookCache.time<300000)return webhookCache.secret;
+ // The authenticated provider API is authoritative for this endpoint. Never
+ // return this value to the browser or accept a request-supplied endpoint ID.
+ const endpoint=await yc('/webhookEndpoints/'+WEBHOOK_ID);
+ if(endpoint.url!==URL_BASE+'/functions/v1/crm-whatsapp/webhook'||endpoint.status!=='active'||typeof endpoint.secret!=='string'||endpoint.secret.length<20)throw Error('Retorno do WhatsApp ainda não está ativo para este ERP.');
+ webhookCache={secret:endpoint.secret,time:Date.now()};return endpoint.secret;
 }
 async function templates(){
  const out:any[]=[];for(let page=1;page<=50;page++){
@@ -108,7 +118,12 @@ Deno.serve(async req=>{
  try {
   if(new URL(req.url).pathname.endsWith('/webhook')){
    const raw=new Uint8Array(await req.arrayBuffer());if(raw.length>1048576)return result({error:'Payload grande demais'},413);
-   if(!await verifyYCloud(raw,req.headers.get('YCloud-Signature')||'',WEBHOOK_SECRET))return result({error:'Assinatura inválida'},401);
+   const signature=req.headers.get('YCloud-Signature')||'';
+   // Prefer a cached authoritative secret; support the configured secret on a
+   // cold start, then reconcile through the provider if it does not match.
+   let verified=await verifyYCloud(raw,signature,webhookCache?.secret||WEBHOOK_SECRET);
+   if(!verified)verified=await verifyYCloud(raw,signature,await signingSecret());
+   if(!verified)return result({error:'Assinatura inválida'},401);
    const e=JSON.parse(new TextDecoder().decode(raw));if(typeof e.id!=='string'||typeof e.type!=='string')return result({error:'Evento inválido'},400);
    const m=e.whatsappMessage,i=e.whatsappInboundMessage;
    if((m&&m.wabaId&&m.wabaId!==WABA)||(m&&m.from&&waPhone(m.from)!==waPhone(FROM))||(i&&i.to&&waPhone(i.to)!==waPhone(FROM)))return result({ignored:true});
@@ -118,14 +133,16 @@ Deno.serve(async req=>{
   const {data:{user},error}=await db.auth.getUser(token);if(error||!user)return result({error:'Entre no ERP para continuar.'},401);
   const b=await req.json();
   if(b.action==='status'){
-   const [ts,phones]=await Promise.all([templates(),yc('/whatsapp/phoneNumbers?limit=100')]);
+   const [ts,phones,webhookReady]=await Promise.all([templates(),yc('/whatsapp/phoneNumbers?limit=100'),signingSecret().then(()=>true).catch(()=>false)]);
    const sender=(phones.items||[]).find((p:any)=>waPhone(p.phoneNumber)===waPhone(FROM));
-   return result({configured:!!API_KEY,from:FROM,webhook_ready:!!WEBHOOK_SECRET,sender_status:sender?.status||'Consultar no provedor',templates:ts});
+   return result({configured:!!API_KEY,from:FROM,webhook_ready:webhookReady,sender_status:sender?.status||'Consultar no provedor',templates:ts});
   }
   if(b.action==='audience')return result({rows:await getAudience(b.segment||'carts')});
   if(b.action==='history')return result(await history(user.id));
   if(b.action==='create_template'){
-   const name=String(b.name||'').trim(),body=String(b.body||'').trim();
+   let name=String(b.name||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,110);
+   if(name&&!/^[a-z]/.test(name))name='campanha_'+name;
+   const body=String(b.body||'').trim();
    if(!/^[a-z][a-z0-9_]{2,119}$/.test(name)||body.length<15||body.length>1024)throw Error('Informe um nome válido e uma mensagem de 15 a 1024 caracteres.');
    if([...body.matchAll(/\{\{([^}]+)\}\}/g)].some(m=>m[1]!=='1'))throw Error('Use apenas {{1}} para o primeiro nome.');
    const component:any={type:'BODY',text:body};
@@ -151,7 +168,7 @@ Deno.serve(async req=>{
   }
   if(b.action==='send'){
    if(b.confirm!==true)throw Error('Revise e confirme o disparo.');
-   if(!WEBHOOK_SECRET)throw Error('O retorno de mensagens ainda não foi configurado.');
+   await signingSecret();
    const c=await ownerCampaign(b.id,user.id),t=await template(c.template_name,c.language);
    if(t.status!=='APPROVED')throw Error('A Meta ainda não aprovou este modelo.');
    if((t.components||[]).find((x:any)=>x.type==='BODY')?.text!==c.template_body)throw Error('O modelo mudou. Prepare uma nova campanha para revisar o texto.');

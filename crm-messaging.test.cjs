@@ -51,3 +51,11 @@ test('backend validates the login before campaign actions and never accepts a br
  assert.match(source,/t.status!=='APPROVED'/);assert.match(source,/crm_wa_claim/);assert.match(source,/status:'unknown'/);
  new vm.Script(stripTypeScriptTypes(source.replace(/^import[^\n]*\n/,'')));
 });
+test('signature reconciliation only trusts the fixed active endpoint belonging to this ERP',async()=>{
+ const code=source.slice(source.indexOf('async function signingSecret'),source.indexOf('async function templates'));
+ for(const good of [true,false]){
+  let calls=0;const c=vm.createContext({URL_BASE:'https://erp.example.test',WEBHOOK_ID:'fixed-endpoint',webhookCache:null,Date,yc:async path=>{calls++;assert.equal(path,'/webhookEndpoints/fixed-endpoint');return {url:good?'https://erp.example.test/functions/v1/crm-whatsapp/webhook':'https://another.example.test/webhook',status:'active',secret:'whsec_test_only_01234567890123456789'};}});
+  vm.runInContext(stripTypeScriptTypes(code),c);
+  if(good){assert.match(await c.signingSecret(),/^whsec_/);await c.signingSecret();assert.equal(calls,1);}else await assert.rejects(c.signingSecret());
+ }
+});
