@@ -9,7 +9,7 @@
  const model={preview,totals,filterRows};if(typeof module==='object'&&module.exports){module.exports=model;return;}
  root.CRMMessaging=model;if(typeof document==='undefined')return;
  const esc=v=>escHtml(String(v??'')),$=id=>document.getElementById(id);
- const state={rows:[],selected:new Set(),templates:[],campaigns:[],inbox:[],config:null,error:'',loading:false,segment:'all',q:'',page:0,draftId:null,sending:false,pause:false};
+ const state={rows:[],selected:new Set(),templates:[],campaigns:[],inbox:[],config:null,error:'',loading:false,segment:'all',q:'',page:0,draftId:null,sending:false,pause:false,audienceVersion:0};
  const currency=(v,c='USD')=>Number(v).toLocaleString('pt-BR',{style:'currency',currency:c});
  const date=v=>v?new Date(v).toLocaleString('pt-BR',{timeZone:'America/Bahia'}):'—';
  async function api(action,body={}){
@@ -54,12 +54,13 @@
   $('wa-history').innerHTML=state.campaigns.length?state.campaigns.map(c=>{const n=totals(c.crm_wa_messages||[]);return `<button class="wa-campaign" data-wa-campaign="${esc(c.id)}"><span><strong>${esc(c.title)}</strong><small>${date(c.created_at)} · ${esc(c.template_name)}</small></span><span>${n.total} contatos<small>${n.pending} preparados · ${n.accepted} aceitos · ${n.delivered} entregues · ${n.replied} respostas${n.failed?' · '+n.failed+' para conferir':''}</small></span><b>Revisar →</b></button>`;}).join(''):'<div class="wa-empty">Nenhuma campanha preparada. Escolha o público e a mensagem acima.</div>';
   $('wa-inbox').innerHTML=state.inbox.length?state.inbox.map(m=>`<article class="wa-reply"><div><strong>${esc(state.rows.find(r=>r.phone===m.phone)?.name||m.phone)}</strong><small>${date(m.received_at)}</small></div><p>${esc(m.body)}</p><a class="btn sm" href="https://wa.me/${m.phone.replace(/\D/g,'')}" target="_blank" rel="noopener">Responder no WhatsApp</a></article>`).join(''):'<div class="wa-empty">As respostas aparecerão aqui quando chegarem pelo WhatsApp.</div>';
  }
- async function loadAudience(){try{feedback('Atualizando público…');state.rows=(await api('audience',{segment:state.segment})).rows;state.selected=new Set([...state.selected].filter(p=>state.rows.some(r=>r.phone===p&&r.eligible)));renderAudience();feedback('');}catch(e){feedback(e.message,true);}}
+ async function loadAudience(){const version=++state.audienceVersion,segment=state.segment;try{feedback('Atualizando público…');const out=await api('audience',{segment});if(version!==state.audienceVersion)return;state.rows=out.rows;state.selected=new Set([...state.selected].filter(p=>state.rows.some(r=>r.phone===p&&r.eligible)));renderAudience();feedback('');}catch(e){if(version===state.audienceVersion)feedback(e.message,true);}}
  async function load(){
   if(state.loading||state.sending)return;state.loading=true;$('wa-refresh').disabled=true;feedback('Atualizando conexão, públicos e campanhas…');
-  const results=await Promise.allSettled([api('status'),api('audience',{segment:state.segment}),api('history')]);
+  const version=++state.audienceVersion,segment=state.segment;
+  const results=await Promise.allSettled([api('status'),api('audience',{segment}),api('history')]);
   if(results[0].status==='fulfilled'){state.config=results[0].value;state.templates=state.config.templates||[];const old=$('wa-template').value;$('wa-template').innerHTML=state.templates.length?state.templates.map(t=>`<option value="${esc(t.name+'|'+t.language)}" ${t.supported?'':'disabled'}>${esc(t.name)} · ${esc(t.status)}</option>`).join(''):'<option value="">Crie seu primeiro modelo</option>';if(state.templates.some(t=>t.name+'|'+t.language===old))$('wa-template').value=old;$('wa-connection').textContent=`WhatsApp ${state.config.from} · ${state.config.sender_status}${state.config.webhook_ready?' · Recebimento configurado':' · Recebimento ainda não configurado'}`;renderPreview();}
-  if(results[1].status==='fulfilled'){state.rows=results[1].value.rows;state.selected=new Set([...state.selected].filter(p=>state.rows.some(r=>r.phone===p&&r.eligible)));}
+  if(results[1].status==='fulfilled'&&version===state.audienceVersion){state.rows=results[1].value.rows;state.selected=new Set([...state.selected].filter(p=>state.rows.some(r=>r.phone===p&&r.eligible)));}
   if(results[2].status==='fulfilled'){state.campaigns=results[2].value.campaigns||[];state.inbox=results[2].value.inbox||[];}
   renderAudience();renderHistory();const failure=results.find(r=>r.status==='rejected');feedback(failure?failure.reason.message:'Dados atualizados. Preparar uma campanha não dispara mensagens.',!!failure);if(results[0].status==='rejected')$('wa-connection').textContent='Não foi possível consultar a conexão.';
   state.loading=false;$('wa-refresh').disabled=false;

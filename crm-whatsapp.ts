@@ -86,7 +86,7 @@ async function getAudience(segment:string){
  if(!['carts','buyers','all'].includes(segment))throw Error('Público inválido.');
  const [clients,carts,orders,prefs,recents]=await Promise.all([
   allRows('clientes','id,nome,email,telefone,created_at'),allRows('carrinhos_abandonados','id,nome,email,telefone,data_criacao,total,recuperado,ignorado'),
-  allRows('pedidos','id,cliente_id,cliente_email,cliente_telefone,data,status'),db.from('crm_wa_preferences').select('*').then(checked),
+  allRows('pedidos','id,cliente_email,cliente_telefone,data,status'),db.from('crm_wa_preferences').select('*').then(checked),
   db.from('crm_wa_messages').select('phone').gte('attempt_at',new Date(Date.now()-86400000).toISOString()).in('status',['sending','unknown','accepted','sent','delivered','read']).then(checked)
  ]);
  return audienceRows(clients,carts,orders,prefs||[],recents||[],segment);
