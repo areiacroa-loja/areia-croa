@@ -196,4 +196,5 @@
   };
   mounted();renderClientes();
   if(perfActiveTabV95()==='clientes')root.refreshClientCRM();
+  const campaignsScript=document.createElement('script');campaignsScript.src='crm-messaging.js';campaignsScript.defer=true;document.head.append(campaignsScript);
 })(typeof window==='undefined'?{}:window);
