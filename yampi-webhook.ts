@@ -117,6 +117,26 @@ function isPaidTraffic(r: any) {
   return /\b(cpc|ppc|paid|paid_social|ads?|meta|facebook|instagram|google)\b/.test(blob);
 }
 
+async function resolveMetaCampaign(value: any) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  try {
+    const byId = await sb.from("meta_campaign_classification")
+      .select("campaign_id,campaign_name,tipo").eq("campaign_id", raw).limit(2);
+    if (byId.error) throw byId.error;
+    if (byId.data?.length === 1) return byId.data[0];
+    let name = raw;
+    try { name = decodeURIComponent(raw.replace(/\+/g, " ")); } catch (_) {}
+    const byName = await sb.from("meta_campaign_classification")
+      .select("campaign_id,campaign_name,tipo").eq("campaign_name", name).limit(2);
+    if (byName.error) throw byName.error;
+    return byName.data?.length === 1 ? byName.data[0] : null;
+  } catch (error) {
+    console.warn("Campanha Meta indisponivel para atribuicao", error);
+    return null; // A classification outage must never discard an approved order.
+  }
+}
+
 function yampiCancellation(r: any) {
   const status = r?.status?.data || r?.status || {};
   const alias = String(status.alias || "").trim().toLowerCase();
@@ -711,7 +731,8 @@ async function processPaidOrder(body: any) {
   const clienteNome = String(customer?.name || customer?.generic_name || shipping?.receiver || "Cliente Yampi").trim();
   const clienteEmail = String(customer?.email || "").trim().toLowerCase() || null;
   const clienteTelefone = cleanPhone(customer?.phone?.full_number || customer?.phone || "");
-  const viaTrafego = isPaidTraffic(r);
+  const campanhaMeta = await resolveMetaCampaign(r.utm_campaign);
+  const viaTrafego = Boolean(campanhaMeta) || isPaidTraffic(r);
   const qtdTotal = items.reduce((s: number, i: any) => s + Math.max(1, Number(i?.quantity || 1)), 0);
   const utm = [
     r.utm_source ? `source=${r.utm_source}` : "",
@@ -792,6 +813,7 @@ async function processPaidOrder(body: any) {
     observacoes: existing?.observacoes && String(existing.observacoes).includes(obs)
       ? existing.observacoes : [existing?.observacoes, obs].filter(Boolean).join(" · ") || null,
     yampi_order_id: String(r.id),
+    meta_campaign_id: campanhaMeta?.campaign_id || null,
     ...Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
       .map(key => [key, r[key] == null || String(r[key]).trim() === "" ? existing?.[key] || null : String(r[key])])),
     updated_at: new Date().toISOString(),

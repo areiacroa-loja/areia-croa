@@ -12,13 +12,23 @@
     if (p.utm_campaign) return String(p.utm_campaign).trim();
     return String(p.observacoes || '').match(/campaign=([^|·]+)/)?.[1]?.trim() || '';
   }
+  function campaignForOrder(p, campaigns) {
+    const raw = tracking(p);
+    let decoded = raw;
+    try { decoded = decodeURIComponent(raw.replace(/\+/g, ' ')); } catch (_) {}
+    // IDs take precedence over names; renamed campaigns keep their identity.
+    const id = String(p.meta_campaign_id || raw);
+    const byId = campaigns.filter(c => id && String(c.campaign_id) === id);
+    if (byId.length === 1) return byId[0];
+    const byName = campaigns.filter(c => raw && [raw, decoded].includes(String(c.campaign_name).trim()));
+    return byName.length === 1 ? byName[0] : null;
+  }
   function attribution(orders, campaigns) {
     const matched = new Map(), unmatched = [];
     orders.forEach(p => {
-      const campaign = tracking(p);
-      const candidates = campaigns.filter(c => campaign && (String(c.campaign_id) === campaign || String(c.campaign_name).trim() === campaign));
-      if (candidates.length !== 1) { unmatched.push(p); return; }
-      const c = candidates[0], key = String(c.campaign_id);
+      const c = campaignForOrder(p, campaigns);
+      if (!c) { unmatched.push(p); return; }
+      const key = String(c.campaign_id);
       const row = matched.get(key) || {...c, orders: 0, revenue: 0};
       row.orders++; row.revenue += Number(p.receita || 0); matched.set(key, row);
     });
@@ -26,6 +36,16 @@
   }
   // Also available to the regression tests; no network access or side effects.
   window.acCampaignAttribution = attribution;
+  window.acCampaignForOrder = campaignForOrder;
+  trafegoPedidosMesV10 = function(ym) {
+    return pedidosBaseV9().filter(p => {
+      if (ym && getMes(p.data) !== ym) return false;
+      if (p.via_trafego !== true && p.via_trafego !== 'true') return false;
+      const c = campaignForOrder(p, cache.metaCampaignRules || []);
+      return !c || tipoCampanhaV10(c) === 'vendas';
+    });
+  };
+  pedidosTrafegoMesV96 = trafegoPedidosMesV10;
   renderAutoV10 = function() {
     const wrap = document.getElementById('v10-source-grid');
     if (!wrap) return;
@@ -35,6 +55,7 @@
     const yampi = orders.filter(p => /yampi/i.test(p.origem_dados || p.canal || ''));
     const campaignMap = new Map();
     rows.forEach(c => {if (c.campaign_id) campaignMap.set(String(c.campaign_id), c);});
+    (cache.metaCampaignRules || []).forEach(c => campaignMap.set(String(c.campaign_id), c));
     const a = attribution(yampi, [...campaignMap.values()]);
     const sums = key => rows.reduce((s, r) => s + Number(r[key] || 0), 0);
     const brandingShare = d.gastoTotal > 0 ? Math.min(100, Math.max(0, d.gastoBranding / d.gastoTotal * 100)) : 0;

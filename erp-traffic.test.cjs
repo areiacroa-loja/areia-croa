@@ -12,3 +12,9 @@ test('historical original campaign in notes can be recovered without fuzzy match
  const result=c.window.acCampaignAttribution([{observacoes:'Yampi order_id=10 · source=meta | campaign=campanha original | content=anuncio',receita:20}],[{campaign_id:'4',campaign_name:'campanha original'}]);
  assert.equal(result.matched[0].revenue,20);
 });
+test('branding orders stay outside sales ROAS while manual attribution is retained',()=>{
+ c.cache={metaCampaignRules:[{campaign_id:'1',tipo:'branding'},{campaign_id:'2',tipo:'vendas'}]};
+ c.getMes=v=>v.slice(0,7);c.tipoCampanhaV10=p=>p.tipo;
+ c.pedidosBaseV9=()=>[{id:1,data:'2026-11-01',utm_campaign:'1',via_trafego:true},{id:2,data:'2026-11-01',utm_campaign:'2',via_trafego:true},{id:3,data:'2026-11-01',via_trafego:true}];
+ assert.deepEqual(Array.from(c.trafegoPedidosMesV10('2026-11'),p=>p.id),[2,3]);
+});

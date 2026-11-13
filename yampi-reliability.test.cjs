@@ -20,7 +20,7 @@ test('cancellation preserves line items and non-Yampi orders',async()=>{
 });
 function paidContext({status='pago',insertError=null,retryError=null}={}){
  const writes=[];const existing={id:7,status,origem_dados:'Yampi webhook',receita:100,taxas_origem:'estimado',frete:0,custo_embalagens:5};
- const c=vm.createContext({money:n=>Math.round(Number(n||0)*100)/100,dateOnly:()=> '2026-11-13',cleanPhone:()=>'',isPaidTraffic:()=>true,findOrCreateClient:async()=>null,matchProduct:()=>({id:1,nome:'Produto',custo:10}),itemTitle:()=> 'Produto',allocateRevenue:()=>[100],markRecoveredCartForPaidOrder:async()=>null,logEvent:async()=>{},PACKAGING_COST:5,
+ const c=vm.createContext({money:n=>Math.round(Number(n||0)*100)/100,dateOnly:()=> '2026-11-13',cleanPhone:()=>'',isPaidTraffic:()=>true,resolveMetaCampaign:async()=>null,findOrCreateClient:async()=>null,matchProduct:()=>({id:1,nome:'Produto',custo:10}),itemTitle:()=> 'Produto',allocateRevenue:()=>[100],markRecoveredCartForPaidOrder:async()=>null,logEvent:async()=>{},PACKAGING_COST:5,
  sb:{from(table){let op='select';const q={select(){return q},eq(){return q},order(){return q},limit:async()=>({data:table==='pedidos'?[existing]:[]}),update(row){op='update';writes.push({table,op,row});return q},insert(row){op='insert';writes.push({table,op,row});return q},then(resolve){return Promise.resolve({data:table==='produtos'?[{id:1,nome:'Produto',custo:10}]:[],error:table==='vendas'?(op==='insert'?insertError:retryError):null}).then(resolve)}};return q},rpc:async()=>({error:null})}});
  vm.runInContext(stripTypeScriptTypes(source.slice(source.indexOf('function paymentBreakdownV108'),source.indexOf('async function recoverYampiOrder'))),c);
  return {c,writes};
@@ -38,4 +38,18 @@ test('failed duplicate retry is not acknowledged as success',async()=>{
 test('late paid webhook cannot reopen a manually cancelled order',async()=>{
  const {c,writes}=paidContext({status:'cancelado'});const result=await c.processPaidOrder(body);
  assert.equal(result.reason,'existing_cancelled');assert.equal(writes.length,0);
+});
+test('ig/social order with an exact known Meta campaign is paid traffic',async()=>{
+ const {c,writes}=paidContext();c.isPaidTraffic=()=>false;
+ c.resolveMetaCampaign=async()=>({campaign_id:'120001234567890',tipo:'vendas'});
+ await c.processPaidOrder({...body,resource:{...body.resource,utm_source:'ig',utm_medium:'social'}});
+ const header=writes.find(w=>w.table==='pedidos').row;
+ assert.equal(header.via_trafego,true);assert.equal(header.meta_campaign_id,'120001234567890');
+});
+test('Meta resolver requires an exact ID or unique decoded campaign name',async()=>{
+ const resolver=source.slice(source.indexOf('async function resolveMetaCampaign'),source.indexOf('function yampiCancellation'));
+ for(const ambiguous of [false,true]){
+  const c=vm.createContext({console,sb:{from(){let key;return {select(){return this},eq(k,v){key=k;return this},limit:async()=>({data:key==='campaign_id'?[]:ambiguous?[{campaign_id:'1'},{campaign_id:'2'}]:[{campaign_id:'1'}]})}}}});
+  vm.runInContext(stripTypeScriptTypes(resolver),c);const result=await c.resolveMetaCampaign('Ver%C3%A3o+2026');assert.equal(result?.campaign_id,ambiguous?undefined:'1');
+ }
 });
