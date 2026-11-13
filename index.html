@@ -2987,7 +2987,7 @@ function pedidosBaseV9(){
   });
   return Object.values(groups);
 }
-function itensPedidoV9(p){return (cache.vendas||[]).filter(v=>sameIdV9(v.pedido_id,p.id)||(!p.id&&v.pedido_ref===p.referencia)||(p.__fallback&&(v.pedido_ref===p.referencia||`venda:${v.id}`===p.id)))}
+function itensPedidoV9(p){return (cache.vendasTodas||cache.vendas||[]).filter(v=>sameIdV9(v.pedido_id,p.id)||(!p.id&&v.pedido_ref===p.referencia)||(p.__fallback&&(v.pedido_ref===p.referencia||`venda:${v.id}`===p.id)))}
 function custoPedidoV9(p){return Number(p.custo_produtos||0)+Number(p.custo_embalagens||0)+Number(p.frete||0)+Number(p.taxas||0)}
 function lucroPedidoV9(p){return Number(p.receita||0)-custoPedidoV9(p)}
 function dadosTrafegoPedidoV9(fm=''){
@@ -3153,7 +3153,7 @@ async function carregarCarrinhosV95(force=false){return perfOnceV95('carrinhos',
 async function carregarVendasV95(force=false){
   return perfOnceV95('vendas',async()=>{
     const [vend,vendEmb]=await Promise.all([sb.from('vendas').select('*').order('data',{ascending:false}),sb.from('venda_embalagens').select('*')]);if(vend.error)throw vend.error;
-    const embPorVenda={};(vendEmb.data||[]).forEach(e=>{(embPorVenda[e.venda_id]||=[]).push(e)});cache.vendas=(vend.data||[]).map(v=>({...v,embalagens:embPorVenda[v.id]||[]}));salesTrafficSchemaV5=true;salesStateSchemaV6=true;
+    const embPorVenda={};(vendEmb.data||[]).forEach(e=>{(embPorVenda[e.venda_id]||=[]).push(e)});cache.vendasTodas=(vend.data||[]).map(v=>({...v,embalagens:embPorVenda[v.id]||[]}));cache.vendas=cache.vendasTodas.filter(v=>!(cache.pedidos||[]).some(p=>sameIdV9(p.id,v.pedido_id)&&p.status!=='pago')).map(v=>({...v,embalagens:embPorVenda[v.id]||[]}));salesTrafficSchemaV5=true;salesStateSchemaV6=true;
   },force)
 }
 
@@ -4179,7 +4179,7 @@ function ruleMapV10(){
   return m;
 }
 function tipoCampanhaV10(row){
-  return ruleMapV10().get(String(row.campaign_id))?.tipo||'nao_classificado';
+  return ruleMapV10().get(String(row.campaign_id))?.tipo==='vendas'?'vendas':'branding';
 }
 function metaRowsV10(ym){
   return rowsMesV10(cache.metaAdsDaily,ym,'data');
@@ -4329,15 +4329,13 @@ function renderCampanhasV10(){
   if(!rows.length){el.innerHTML='<div class="v10-empty">Nenhuma campanha Meta sincronizada neste mês ainda.</div>';return}
   const rules=ruleMapV10();
   el.innerHTML=rows.map(c=>{
-    const tipo=rules.get(c.campaign_id)?.tipo||'nao_classificado';
+    const tipo=tipoCampanhaV10(c);
     return `<div class="v10-campaign-row">
       <div class="v10-campaign-info"><strong>${escHtml(c.campaign_name)}</strong><small>${c.impressions.toLocaleString('pt-BR')} impressões · ${c.clicks.toLocaleString('pt-BR')} cliques</small></div>
       <div class="v10-campaign-spend">${fmtVal(c.spend)}</div>
       <select onchange="classificarCampanhaV10('${c.campaign_id}',this.value)">
-        <option value="nao_classificado" ${tipo==='nao_classificado'?'selected':''}>Classificar…</option>
         <option value="vendas" ${tipo==='vendas'?'selected':''}>Vendas</option>
         <option value="branding" ${tipo==='branding'?'selected':''}>Branding</option>
-        <option value="ignorar" ${tipo==='ignorar'?'selected':''}>Ignorar</option>
       </select>
     </div>`;
   }).join('');
@@ -4830,7 +4828,7 @@ renderCampanhasV10=function(){
     return;
   }
   el.innerHTML=rows.map(c=>{
-    const tipo=rules.get(c.campaign_id)?.tipo||'nao_classificado';
+    const tipo=tipoCampanhaV10(c);
     const spend=Number(c.spend||0),purchases=Number(c.purchases||0),purchaseValue=Number(c.purchase_value||0);
     const lpv=Number(c.landing_page_views||0),atc=Number(c.add_to_cart||0),checkout=Number(c.initiate_checkout||0),links=Number(c.link_clicks||0),impressions=Number(c.impressions||0);
     const roas=spend>0?purchaseValue/spend:0,cpa=purchases>0?spend/purchases:0,ctr=impressions>0?links/impressions*100:0;
@@ -4839,10 +4837,8 @@ renderCampanhasV10=function(){
         <div class="v103-campaign-title"><strong title="${escHtml(c.campaign_name)}">${escHtml(c.campaign_name)}</strong><span class="v103-active-pill">Ativa</span></div>
         <div class="v103-campaign-spend">${fmtVal(spend)}</div>
         <select onchange="classificarCampanhaV10('${c.campaign_id}',this.value)">
-          <option value="nao_classificado" ${tipo==='nao_classificado'?'selected':''}>Classificar…</option>
           <option value="vendas" ${tipo==='vendas'?'selected':''}>Vendas</option>
           <option value="branding" ${tipo==='branding'?'selected':''}>Branding</option>
-          <option value="ignorar" ${tipo==='ignorar'?'selected':''}>Ignorar</option>
         </select>
       </div>
       <div class="v103-metrics">
@@ -5500,11 +5496,12 @@ function htmlFretesV107(p){
 }
 
 abrirEditarPedidoV96=function(id){
-  const p=pedidosBaseV9().find(x=>v107Same(x.id,id));if(!p)return;
+  const p=(cache.pedidos||[]).find(x=>v107Same(x.id,id));if(!p)return;
   const canais=['Shopify','Yampi','Instagram','Presencial','Mercado Livre','WhatsApp','Outro'].map(c=>`<option ${c===p.canal?'selected':''}>${c}</option>`).join('');
   const auto=freteAutomaticoV107(p.id),temLedger=fretesPedidoV107(p.id).length>0,manual=p.frete_manual!==null&&p.frete_manual!==undefined;
   document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()">&times;</button><div class="modal-header"><div><div class="modal-title">Editar pedido ${escHtml(p.referencia||'#'+p.id)}</div><div class="modal-subtitle">Custos do pedido, tráfego e brinde ficam centralizados aqui.</div></div></div>
   <div class="form-grid col2"><div><label>Data</label><input type="date" id="v96-ped-data" value="${p.data||hoje()}"></div><div><label>Canal</label><select id="v96-ped-canal">${canais}</select></div><div><label>Cliente</label><input id="v96-ped-cliente" value="${escHtml(p.cliente_nome||'')}"></div><div><label>Telefone</label><input id="v96-ped-tel" value="${escHtml(p.cliente_telefone||'')}"></div><div><label>Estado</label><select id="v96-ped-estado">${estadoOptionsV6(normalizeUFV6(p.estado))}</select></div><div><label>Cidade</label><input id="v96-ped-cidade" value="${escHtml(p.cidade||'')}"></div><div style="grid-column:1/-1"><label>Observação</label><input id="v96-ped-obs" value="${escHtml(p.observacoes||'')}"></div></div>
+  <div class="modal-section-label">Situação do pedido</div><label for="ac-order-status">Status no ERP</label><select id="ac-order-status"><option value="pago" ${p.status==='pago'?'selected':''}>Pago</option><option value="cancelado" ${p.status==='cancelado'?'selected':''}>Cancelado</option></select><p class="form-note">Cancelar mantém o histórico e retira o pedido dos indicadores de vendas pagas. O estorno deve ser feito na operadora de pagamento.</p>
   <div class="modal-section-label">Custos do pedido</div><div class="form-grid col2"><div><label>Frete real pago (R$)</label><input type="number" id="v107-ped-frete" value="${Number(p.frete||0).toFixed(2)}" min="0" step="0.01" oninput="this.dataset.auto='0'"><div class="v107-freight-tools">${temLedger?`<button class="btn" type="button" onclick="usarFreteAutomaticoV107('${p.id}')"><i class="ti ti-refresh"></i>Usar soma dos envios</button>`:''}</div></div><div><label>Embalagem (R$)</label><input type="number" id="v107-ped-emb" value="${Number(p.custo_embalagens??5).toFixed(2)}" min="0" step="0.01"></div></div>
   ${temLedger?`<div class="v107-freight-note" id="v107-frete-mode">${manual?'Existe um valor manual de frete neste pedido.':'Frete automático dos envios vinculados: <strong>'+fmtVal(auto)+'</strong>.'}</div>`:''}
   <div class="traffic-origin-box ${pedidoEhTrafegoV96(p)?'active':''} v96-traffic-toggle"><label class="traffic-origin-row" for="v96-ped-trafego"><span class="traffic-origin-icon"><i class="ti ti-ad"></i></span><span class="traffic-origin-copy"><strong>Venda feita pelo tráfego pago</strong><small>Marcado = entra em Compras, Receita, CPA e ROAS.</small></span><input type="checkbox" id="v96-ped-trafego" ${pedidoEhTrafegoV96(p)?'checked':''}><span class="traffic-switch"><i></i></span></label></div>
@@ -5515,22 +5512,35 @@ abrirEditarPedidoV96=function(id){
 };
 
 salvarEditarPedidoV96=async function(id){
-  const p=pedidosBaseV9().find(x=>v107Same(x.id,id));if(!p)return;
+  const p=(cache.pedidos||[]).find(x=>v107Same(x.id,id));if(!p)return;
   const estado=normalizeUFV6(document.getElementById('v96-ped-estado')?.value),freteEl=document.getElementById('v107-ped-frete'),frete=Math.max(0,Number(freteEl?.value||0)),emb=Math.max(0,Number(document.getElementById('v107-ped-emb')?.value||5));
   const temBrinde=!!document.getElementById('v107-ped-brinde')?.checked,custoBrinde=temBrinde?Math.max(0,Number(document.getElementById('v107-ped-brinde-valor')?.value||0)):0;
   const temLedger=fretesPedidoV107(id).length>0,auto=freteAutomaticoV107(id);let freteManual;
   if(temLedger&&(freteEl?.dataset.auto==='1'||Math.abs(frete-auto)<.005))freteManual=null;else freteManual=frete;
   const row={data:document.getElementById('v96-ped-data')?.value||hoje(),canal:document.getElementById('v96-ped-canal')?.value||'Outro',cliente_nome:document.getElementById('v96-ped-cliente')?.value.trim()||null,cliente_telefone:document.getElementById('v96-ped-tel')?.value.trim()||null,estado:estado||null,cidade:document.getElementById('v96-ped-cidade')?.value.trim()||null,observacoes:document.getElementById('v96-ped-obs')?.value.trim()||null,via_trafego:!!document.getElementById('v96-ped-trafego')?.checked,frete,custo_embalagens:emb,tem_brinde:temBrinde,custo_brinde:custoBrinde,frete_manual:freteManual,...collectTaxasInputV108('fee-edit',Number(p.receita||0),p.canal,p)};
-  await checarErro(await sb.from('pedidos').update(row).eq('id',id),'Erro ao editar pedido');
+  const nextStatus=document.getElementById('ac-order-status')?.value||p.status||'pago';
+  if(!['pago','cancelado'].includes(nextStatus))throw new Error('Status inválido');
+  row.status=nextStatus;
+  if(nextStatus!==p.status){
+    row.observacoes=[row.observacoes,`Status alterado manualmente de ${p.status||'pago'} para ${nextStatus} em ${new Date().toISOString()}`].filter(Boolean).join(' · ');
+  }
+  try{
+    let query=sb.from('pedidos').update(row).eq('id',id);
+    if(p.updated_at)query=query.eq('updated_at',p.updated_at);
+    const result=await query.select('id');
+    if(result.error)throw result.error;
+    if(!result.data?.length)throw new Error('O pedido foi atualizado em outra sessão. Reabra para conferir os dados.');
+  }catch(error){alert(error.message||'Não foi possível salvar o pedido.');return;}
+
   const child={data:row.data,canal:row.canal,estado:row.estado,cidade:row.cidade,via_trafego:row.via_trafego};
   const cr=await sb.from('vendas').update(child).eq('pedido_id',id);if(cr.error)console.warn('[V10.7] linhas do pedido',cr.error);
   const rr=await sb.rpc('ac_recalcular_pedido_v94',{p_id:Number(id)});if(rr.error)console.warn('[V10.7] recálculo',rr.error);
-  fecharModalItem();await carregarResumoV95({silent:true});if(perfActiveTabV95()==='vendas'){await carregarVendasV95(true);renderVendas()}renderDashboard();perfSaveV95();
+  fecharModalItem();await carregarResumoV95({silent:true});await carregarVendasV95(true);renderHistorico();renderVendas();renderDashboard();perfSaveV95();
 };
 
 abrirModalPedidoV9=function(id){
-  const p=pedidosBaseV9().find(x=>v107Same(x.id,id));if(!p)return;const itens=itensPedidoV9(p),uf=normalizeUFV6(p.estado),luc=lucroPedidoV9(p),traf=pedidoEhTrafegoV96(p),gift=custoBrindeV107(p);
-  document.getElementById('modal-venda-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalVenda()">&times;</button><div class="modal-header"><div><span class="venda-codigo">${escHtml(p.referencia||'#'+p.id)}</span>${Number(p.itens||1)>1?`<span class="order-badge-v9"><i class="ti ti-layers-subtract"></i>${p.itens} itens</span>`:''}${traf?'<span class="traffic-sale-badge"><i class="ti ti-ad"></i> tráfego</span>':''}${p.tem_brinde?'<span class="traffic-sale-badge"><i class="ti ti-gift"></i> brinde</span>':''}<div class="modal-title" style="margin-top:9px">${escHtml(p.cliente_nome||'Pedido')}</div><div class="modal-subtitle">${fmtData(p.data)} · ${escHtml(p.canal||'Outro')}${uf?' · '+escHtml(nomeEstadoV6(uf)):''}</div></div></div><div class="modal-section-label">Itens do pedido</div><div class="order-items-preview">${itens.length?itens.map(v=>`<div class="order-item-preview" onclick="abrirEdicaoVenda('${v.id}')" style="cursor:pointer"><span><strong>${Number(v.quantidade||1)}×</strong> ${escHtml(v.produto_nome)}</span><strong>${fmtVal(v.receita)}</strong></div>`).join(''):'<div class="order-item-preview"><span>Itens não vinculados.</span></div>'}</div><div class="modal-section-label">Financeiro do pedido</div><div class="modal-row"><span>Receita</span><span style="color:var(--success)">${fmtVal(p.receita)}</span></div><div class="modal-row"><span>Custo produtos</span><span>${fmtVal(p.custo_produtos)}</span></div><div class="modal-row"><span>Frete real</span><span>${fmtVal(p.frete)}</span></div><div class="modal-row"><span>Embalagem</span><span>${fmtVal(p.custo_embalagens)}</span></div><div class="modal-row"><span>Taxas</span><span>${fmtVal(p.taxas)}</span></div><div class="modal-row"><span>Brinde</span><span>${p.tem_brinde?fmtVal(gift):'—'}</span></div><div class="modal-row"><span>Origem</span><span style="color:${traf?'var(--accent)':'var(--text)'}">${traf?'Tráfego pago':'Orgânico / não atribuído'}</span></div><div class="modal-total"><span>Lucro operacional</span><span style="color:${luc>=0?'var(--success)':'var(--danger)'}">${fmtVal(luc)}</span></div>${htmlFretesV107(p)}<div class="modal-actions"><button class="btn ghost" onclick="fecharModalVenda()">Fechar</button><button class="btn primary" onclick="fecharModalVenda();abrirEditarPedidoV96('${p.id}')"><i class="ti ti-pencil"></i>Editar pedido</button></div>`;
+  const p=(cache.pedidos||[]).find(x=>v107Same(x.id,id));if(!p)return;const itens=itensPedidoV9(p),uf=normalizeUFV6(p.estado),luc=lucroPedidoV9(p),traf=pedidoEhTrafegoV96(p),gift=custoBrindeV107(p);
+  document.getElementById('modal-venda-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalVenda()">&times;</button><div class="modal-header"><div><span class="venda-codigo">${escHtml(p.referencia||'#'+p.id)}</span>${Number(p.itens||1)>1?`<span class="order-badge-v9"><i class="ti ti-layers-subtract"></i>${p.itens} itens</span>`:''}${traf?'<span class="traffic-sale-badge"><i class="ti ti-ad"></i> tráfego</span>':''}${p.tem_brinde?'<span class="traffic-sale-badge"><i class="ti ti-gift"></i> brinde</span>':''}<div class="modal-title" style="margin-top:9px">${escHtml(p.cliente_nome||'Pedido')}</div><div class="modal-subtitle">${p.status==='cancelado'?'Cancelado · ':'Pago · '}${fmtData(p.data)} · ${escHtml(p.canal||'Outro')}${uf?' · '+escHtml(nomeEstadoV6(uf)):''}</div></div></div><div class="modal-section-label">Itens do pedido</div><div class="order-items-preview">${itens.length?itens.map(v=>`<div class="order-item-preview" onclick="abrirEdicaoVenda('${v.id}')" style="cursor:pointer"><span><strong>${Number(v.quantidade||1)}×</strong> ${escHtml(v.produto_nome)}</span><strong>${fmtVal(v.receita)}</strong></div>`).join(''):'<div class="order-item-preview"><span>Itens não vinculados.</span></div>'}</div><div class="modal-section-label">Financeiro do pedido</div><div class="modal-row"><span>Receita</span><span style="color:var(--success)">${fmtVal(p.receita)}</span></div><div class="modal-row"><span>Custo produtos</span><span>${fmtVal(p.custo_produtos)}</span></div><div class="modal-row"><span>Frete real</span><span>${fmtVal(p.frete)}</span></div><div class="modal-row"><span>Embalagem</span><span>${fmtVal(p.custo_embalagens)}</span></div><div class="modal-row"><span>Taxas</span><span>${fmtVal(p.taxas)}</span></div><div class="modal-row"><span>Brinde</span><span>${p.tem_brinde?fmtVal(gift):'—'}</span></div><div class="modal-row"><span>Origem</span><span style="color:${traf?'var(--accent)':'var(--text)'}">${traf?'Tráfego pago':'Orgânico / não atribuído'}</span></div><div class="modal-total"><span>Lucro operacional</span><span style="color:${luc>=0?'var(--success)':'var(--danger)'}">${fmtVal(luc)}</span></div>${htmlFretesV107(p)}<div class="modal-actions"><button class="btn ghost" onclick="fecharModalVenda()">Fechar</button><button class="btn primary" onclick="fecharModalVenda();abrirEditarPedidoV96('${p.id}')"><i class="ti ti-pencil"></i>Editar pedido</button></div>`;
   document.getElementById('modal-venda').classList.remove('hidden');document.body.classList.add('modal-open');
 };
 
@@ -5583,5 +5593,6 @@ document.documentElement.style.webkitTextSizeAdjust='100%';
 <script src="payment-fees-ui.js"></script>
 <link rel="stylesheet" href="erp-design.css">
 <script src="erp-design.js"></script>
+<script src="erp-traffic.js"></script>
 </body>
 </html>

@@ -117,6 +117,42 @@ function isPaidTraffic(r: any) {
   return /\b(cpc|ppc|paid|paid_social|ads?|meta|facebook|instagram|google)\b/.test(blob);
 }
 
+function yampiCancellation(r: any) {
+  const status = r?.status?.data || r?.status || {};
+  const alias = String(status.alias || "").trim().toLowerCase();
+  // Partial refunds and failed payment attempts do not cancel an entire order.
+  return ["cancelled", "canceled", "cancelado", "refunded", "chargeback"].includes(alias);
+}
+
+async function processCancelledOrder(body: any) {
+  const r = body?.resource || {};
+  if (!r.id) throw new Error("Pedido cancelado sem resource.id");
+  const reference = String(r.number || r.id);
+  const { data: orders, error } = await sb.from("pedidos").select("id,status,origem_dados,observacoes")
+    .eq("referencia", reference).limit(2);
+  if (error) throw error;
+  if ((orders || []).length > 1) throw new Error("Referencia de cancelamento ambigua");
+  const order = orders?.[0];
+  if (!order || !String(order.origem_dados || "").toLowerCase().includes("yampi")) {
+    await logEvent(`${body.event}:${r.id}:${body.time || ""}`, {
+      event: body.event, resource_id: String(r.id), reference,
+      status: "cancelled_order_not_linked", error_message: null,
+    });
+    return { ok: true, skipped: true, reason: "cancelled_order_not_linked", reference };
+  }
+  if (order.status !== "cancelado") {
+    const note = `Cancelado via Yampi (${String(r?.status?.data?.alias || r?.status?.alias || "")}) em ${new Date().toISOString()}`;
+    const { error: updateError } = await sb.from("pedidos").update({
+      status: "cancelado", observacoes: [order.observacoes, note].filter(Boolean).join(" · "),
+    }).eq("id", order.id);
+    if (updateError) throw updateError;
+  }
+  await logEvent(`${body.event}:${r.id}:${body.time || ""}`, {
+    event: body.event, resource_id: String(r.id), reference, status: "processed_cancelled", error_message: null,
+  });
+  return { ok: true, processed: true, kind: "cancellation", reference, pedido_id: order.id };
+}
+
 function dateOnly(v: any) {
   const s = typeof v === "string" ? v : v?.date;
   const m = String(s || "").match(/\d{4}-\d{2}-\d{2}/);
@@ -682,6 +718,7 @@ async function processPaidOrder(body: any) {
     r.utm_medium ? `medium=${r.utm_medium}` : "",
     r.utm_campaign ? `campaign=${r.utm_campaign}` : "",
     r.utm_content ? `content=${r.utm_content}` : "",
+    r.utm_term ? `term=${r.utm_term}` : "",
   ].filter(Boolean).join(" | ");
   const obs = [`Yampi order_id=${r.id}`, utm].filter(Boolean).join(" · ");
 
@@ -709,6 +746,11 @@ async function processPaidOrder(body: any) {
 
   let pedidoId: number;
   const existing = existingOrders?.[0];
+
+  // A delayed paid notification must never reopen a cancelled order.
+  if (existing && /cancel|refund|chargeback|estorn/i.test(String(existing.status || ""))) {
+    return { ok: true, skipped: true, reason: "existing_cancelled", reference };
+  }
 
   if (existing && !String(existing.origem_dados || "").toLowerCase().includes("yampi")) {
     await logEvent(eventKey, {
@@ -746,13 +788,18 @@ async function processPaidOrder(body: any) {
     via_trafego: viaTrafego,
     status: "pago",
     origem_dados: "Yampi webhook",
-    observacoes: obs || null,
+    // Keep manual notes, including status changes, across webhook replays.
+    observacoes: existing?.observacoes && String(existing.observacoes).includes(obs)
+      ? existing.observacoes : [existing?.observacoes, obs].filter(Boolean).join(" · ") || null,
+    yampi_order_id: String(r.id),
+    ...Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]
+      .map(key => [key, r[key] == null || String(r[key]).trim() === "" ? existing?.[key] || null : String(r[key])])),
     updated_at: new Date().toISOString(),
   };
 
   if (existing) {
     pedidoId = existing.id;
-    const { error } = await sb.from("pedidos").update(header).eq("id", pedidoId);
+    const { error } = await sb.from("pedidos").update(header).eq("id", pedidoId).eq("status", existing.status || "pago");
     if (error) throw error;
   } else {
     const { data: inserted, error } = await sb
@@ -804,7 +851,12 @@ async function processPaidOrder(body: any) {
       if (error) throw error;
     } else {
       const { error } = await sb.from("vendas").insert(row);
-      if (error) throw error;
+      // Different order events can arrive together after both SELECTs saw no row.
+      // The unique index arbitrates that race; update the winning row on retry.
+      if (error?.code === "23505") {
+        const { error: retryError } = await sb.from("vendas").update(row).eq("origem_ref", origemRef);
+        if (retryError) throw retryError;
+      } else if (error) throw error;
     }
   }
 
@@ -919,6 +971,9 @@ Deno.serve(async (req) => {
     // A Yampi também pode sinalizar mudança de status; se o payload já mostra pagamento
     // aprovado/capturado, processamos a venda de forma idempotente.
     const isOrderEvent = ["order.paid", "order.status.updated", "order.updated", "order.created"].includes(event);
+    if (isOrderEvent && yampiCancellation(body?.resource || {})) {
+      return json(await processCancelledOrder(body));
+    }
     if (isOrderEvent && yampiOrderLooksPaid(body?.resource || {})) {
       const result = await processPaidOrder(body);
       return json({ ...result, accepted_event: event });
