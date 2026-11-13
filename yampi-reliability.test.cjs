@@ -3,6 +3,14 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 const {stripTypeScriptTypes}=require('node:module');
 const source=fs.readFileSync(__dirname+'/yampi-webhook.ts','utf8');
+test('named sales campaigns from Instagram retain traffic evidence without a Meta ID',()=>{
+ const c=vm.createContext({});
+ vm.runInContext(stripTypeScriptTypes(source.slice(source.indexOf('function isPaidTraffic'),source.indexOf('async function resolveMetaCampaign'))),c);
+ for(const campaign of ['HL (VENDAS) SITE 2 — Cópia','HL+%28VENDAS%29+SITE+2'])
+  assert.equal(c.isPaidTraffic({utm_source:'ig',utm_medium:'social',utm_campaign:campaign}),true);
+ assert.equal(c.isPaidTraffic({utm_source:'ig',utm_medium:'social',utm_content:'link_in_bio'}),false);
+ assert.equal(c.isPaidTraffic({utm_source:'ig',utm_medium:'organic',utm_campaign:'HL (VENDAS) SITE 2'}),false);
+});
 const cancelCode=source.slice(source.indexOf('function yampiCancellation'),source.indexOf('function dateOnly'));
 test('only definitive whole-order statuses cancel an order',()=>{
  const c=vm.createContext({});vm.runInContext(stripTypeScriptTypes(cancelCode),c);

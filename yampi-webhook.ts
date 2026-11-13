@@ -111,10 +111,12 @@ function matchProduct(item: any, products: any[]) {
 function isPaidTraffic(r: any) {
   const source = String(r?.utm_source || "").toLowerCase();
   const medium = String(r?.utm_medium || "").toLowerCase();
-  const campaign = String(r?.utm_campaign || "").toLowerCase();
+  let campaign = String(r?.utm_campaign || "").toLowerCase();
+  try { campaign = decodeURIComponent(campaign.replace(/\+/g, " ")); } catch (_) {}
   const blob = `${source} ${medium} ${campaign}`;
   if (/\b(organic|direct|referral)\b/.test(medium)) return false;
-  return /\b(cpc|ppc|paid|paid_social|ads?|meta|facebook|instagram|google)\b/.test(blob);
+  return /\b(cpc|ppc|paid|paid_social|ads?|meta|facebook|instagram|google)\b/.test(blob)
+    || (/\b(ig|fb)\b/.test(source) && /\bvendas\b/.test(campaign));
 }
 
 async function resolveMetaCampaign(value: any) {
