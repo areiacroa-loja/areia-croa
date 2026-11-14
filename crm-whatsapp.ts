@@ -50,6 +50,18 @@ async function verifyYCloud(raw:Uint8Array,header:string,secret:string,now=Date.
  return sig.some(([,hex])=>{if(!/^[0-9a-fA-F]{64}$/.test(hex||''))return false;let diff=0;for(let i=0;i<32;i++)diff|=expected[i]^parseInt(hex.slice(i*2,i*2+2),16);return diff===0;});
 }
 
+// A purchase after a message is an association, never proof of causation.
+// Date-only orders are matched only on a later day: same-day ordering is unknown.
+function campaignPurchases(messages:any[],orders:any[]){
+ const touches=messages.filter(m=>['sent','delivered','read'].includes(m.status)&&m.attempt_at&&waPhone(m.phone));
+ return orders.filter(paidOrder).flatMap(o=>{
+  const phone=waPhone(o.cliente_telefone),raw=String(o.data||'');if(!phone||!raw)return [];
+  const dayOnly=/^\d{4}-\d{2}-\d{2}$/.test(raw),when=Date.parse(dayOnly?raw+'T23:59:59-03:00':raw);if(!Number.isFinite(when))return [];
+  const candidates=touches.filter(m=>{const sent=Date.parse(m.attempt_at);const day=new Date(sent-3*3600000).toISOString().slice(0,10);return m.phone===phone&&when>=sent&&when-sent<=7*86400000&&(!dayOnly||raw>day);}).sort((a,b)=>Date.parse(b.attempt_at)-Date.parse(a.attempt_at));
+  if(!candidates.length)return [];const m=candidates[0];
+  return [{order_id:o.id,reference:o.referencia||o.id,name:o.cliente_nome||m.name,phone,date:o.data,revenue:Number(o.receita||0),campaign_id:m.campaign_id,campaign_title:m.crm_wa_campaigns?.title||'',attempt_at:m.attempt_at}];
+ });
+}
 const URL_BASE=Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const db=createClient(URL_BASE,SERVICE_KEY,{auth:{persistSession:false}});
@@ -59,8 +71,9 @@ const API_KEY=Deno.env.get('YCLOUD_API_KEY')||'';
 const WEBHOOK_SECRET=(Deno.env.get('YCLOUD_WEBHOOK_SECRET')||'').trim();
 const WEBHOOK_ID=Deno.env.get('YCLOUD_WEBHOOK_ID')||'6af79e06a9e8a64e618a7918';
 let webhookCache:{secret:string,time:number}|null=null;
-const cors={'Access-Control-Allow-Origin':'https://areia-croa.vercel.app','Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'};
-function result(data:any,status=200){return new Response(JSON.stringify(data),{status,headers:{...cors,'Content-Type':'application/json'}});}
+const ORIGINS=new Set(['https://areia-croa.vercel.app','https://financeiro.areiacroa.com.br']);
+function corsFor(origin:string){return {...(ORIGINS.has(origin)?{'Access-Control-Allow-Origin':origin}:{}),'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS','Vary':'Origin'};}
+function result(data:any,status=200,origin=''){return new Response(JSON.stringify(data),{status,headers:{...corsFor(origin),'Content-Type':'application/json'}});}
 function checked(r:any){if(r.error)throw Error('Não foi possível salvar ou consultar o CRM.');return r.data;}
 async function allRows(table:string,columns='*'){
  const out:any[]=[];for(let start=0;;start+=500){const rows=checked(await db.from(table).select(columns).order('id').range(start,start+499))||[];out.push(...rows);if(rows.length<500)return out;}
@@ -69,7 +82,7 @@ async function yc(path:string,method='GET',body?:any){
  if(!API_KEY)throw Error('Conexão do WhatsApp ainda não configurada.');
  const response=await fetch('https://api.ycloud.com/v2'+path,{method,headers:{'X-API-Key':API_KEY,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(12000)});
  const payload=await response.json().catch(()=>null);
- if(!response.ok){const e:any=Error('YCloud recusou a solicitação ('+response.status+').');e.httpStatus=response.status;throw e;}
+ if(!response.ok){const detail=String(payload?.error?.whatsappApiError?.error_user_msg||payload?.error?.message||'').split(API_KEY).join('[credencial]').slice(0,500);const e:any=Error('YCloud ('+response.status+'): '+(detail||'Não foi possível concluir a solicitação.'));e.httpStatus=response.status;throw e;}
  return payload;
 }
 async function signingSecret(){
@@ -112,59 +125,69 @@ async function history(uid:string){
  const inbox=checked(await db.from('crm_wa_inbox').select('*').order('received_at',{ascending:false}).limit(50));
  return {campaigns,inbox};
 }
+async function analytics(uid:string){
+ const messages:any[]=[];
+ for(let start=0;;start+=500){const rows=checked(await db.from('crm_wa_messages').select('*,crm_wa_campaigns!inner(title,owner_id)').eq('crm_wa_campaigns.owner_id',uid).order('id').range(start,start+499))||[];messages.push(...rows);if(rows.length<500)break;}
+ const orders=messages.some(m=>['sent','delivered','read'].includes(m.status))?await allRows('pedidos','id,referencia,cliente_nome,cliente_telefone,data,status,receita'):[];
+ return {messages,purchases:campaignPurchases(messages,orders)};
+}
 Deno.serve(async req=>{
- if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
- if(req.method!=='POST')return result({error:'Método não permitido'},405);
+ const origin=req.headers.get('Origin')||'';
+ const reply=(data:any,status=200)=>result(data,status,origin);
+ if(origin&&!ORIGINS.has(origin))return reply({error:'Domínio não autorizado.'},403);
+ if(req.method==='OPTIONS')return new Response(null,{status:204,headers:corsFor(origin)});
+ if(req.method!=='POST')return reply({error:'Método não permitido'},405);
  try {
   if(new URL(req.url).pathname.endsWith('/webhook')){
-   const raw=new Uint8Array(await req.arrayBuffer());if(raw.length>1048576)return result({error:'Payload grande demais'},413);
+   const raw=new Uint8Array(await req.arrayBuffer());if(raw.length>1048576)return reply({error:'Payload grande demais'},413);
    const signature=req.headers.get('YCloud-Signature')||'';
    // Prefer a cached authoritative secret; support the configured secret on a
    // cold start, then reconcile through the provider if it does not match.
    let verified=await verifyYCloud(raw,signature,webhookCache?.secret||WEBHOOK_SECRET);
    if(!verified)verified=await verifyYCloud(raw,signature,await signingSecret());
-   if(!verified)return result({error:'Assinatura inválida'},401);
-   const e=JSON.parse(new TextDecoder().decode(raw));if(typeof e.id!=='string'||typeof e.type!=='string')return result({error:'Evento inválido'},400);
+   if(!verified)return reply({error:'Assinatura inválida'},401);
+   const e=JSON.parse(new TextDecoder().decode(raw));if(typeof e.id!=='string'||typeof e.type!=='string')return reply({error:'Evento inválido'},400);
    const m=e.whatsappMessage,i=e.whatsappInboundMessage;
-   if((m&&m.wabaId&&m.wabaId!==WABA)||(m&&m.from&&waPhone(m.from)!==waPhone(FROM))||(i&&i.to&&waPhone(i.to)!==waPhone(FROM)))return result({ignored:true});
-   checked(await db.rpc('crm_wa_accept_event',{e}));return result({ok:true});
+   if((m&&m.wabaId&&m.wabaId!==WABA)||(m&&m.from&&waPhone(m.from)!==waPhone(FROM))||(i&&i.to&&waPhone(i.to)!==waPhone(FROM)))return reply({ignored:true});
+   checked(await db.rpc('crm_wa_accept_event',{e}));return reply({ok:true});
   }
   const token=(req.headers.get('Authorization')||'').replace(/^Bearer\s+/i,'');
-  const {data:{user},error}=await db.auth.getUser(token);if(error||!user)return result({error:'Entre no ERP para continuar.'},401);
+  const {data:{user},error}=await db.auth.getUser(token);if(error||!user)return reply({error:'Entre no ERP para continuar.'},401);
   const b=await req.json();
   if(b.action==='status'){
    const [ts,phones,webhookReady]=await Promise.all([templates(),yc('/whatsapp/phoneNumbers?limit=100'),signingSecret().then(()=>true).catch(()=>false)]);
    const sender=(phones.items||[]).find((p:any)=>waPhone(p.phoneNumber)===waPhone(FROM));
-   return result({configured:!!API_KEY,from:FROM,webhook_ready:webhookReady,sender_status:sender?.status||'Consultar no provedor',templates:ts});
+   return reply({configured:!!API_KEY,from:FROM,webhook_ready:webhookReady,sender_status:sender?.status||'Consultar no provedor',templates:ts});
   }
-  if(b.action==='audience')return result({rows:await getAudience(b.segment||'carts')});
-  if(b.action==='history')return result(await history(user.id));
+  if(b.action==='audience')return reply({rows:await getAudience(b.segment||'carts')});
+  if(b.action==='history')return reply(await history(user.id));
+  if(b.action==='analytics')return reply(await analytics(user.id));
   if(b.action==='create_template'){
    let name=String(b.name||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,110);
    if(name&&!/^[a-z]/.test(name))name='campanha_'+name;
-   const body=String(b.body||'').trim();
+   const body=String(b.body||'').replace(/\r\n/g,'\n').replace(/\\(?=\r?$)/gm,'').replace(/https\\:\/\//g,'https://').trim();
    if(!/^[a-z][a-z0-9_]{2,119}$/.test(name)||body.length<15||body.length>1024)throw Error('Informe um nome válido e uma mensagem de 15 a 1024 caracteres.');
    if([...body.matchAll(/\{\{([^}]+)\}\}/g)].some(m=>m[1]!=='1'))throw Error('Use apenas {{1}} para o primeiro nome.');
    const component:any={type:'BODY',text:body};
    if(body.includes('{{1}}'))component.example={body_text:[['Ana']]};
    const created=await yc('/whatsapp/templates','POST',{wabaId:WABA,name,language:'pt_BR',category:'MARKETING',components:[component]});
-   return result({name:created.name,status:created.status});
+   return reply({name:created.name,status:created.status});
   }
   if(b.action==='preference'){
    if(!['granted','blocked'].includes(b.status)||typeof b.evidence!=='string'||b.evidence.trim().length<3)throw Error('Informe onde e quando o contato autorizou as mensagens.');
    const phone=waPhone(b.phone);if(!(await getAudience('all')).some(r=>r.phone===phone))throw Error('Contato não encontrado no CRM.');
-   checked(await db.from('crm_wa_preferences').upsert({phone,status:b.status,evidence:b.evidence.trim().slice(0,1000),updated_at:new Date().toISOString(),updated_by:user.id}));return result({ok:true});
+   checked(await db.from('crm_wa_preferences').upsert({phone,status:b.status,evidence:b.evidence.trim().slice(0,1000),updated_at:new Date().toISOString(),updated_by:user.id}));return reply({ok:true});
   }
   if(b.action==='prepare'){
    if(!/^[a-f0-9-]{36}$/i.test(b.id||'')||!Array.isArray(b.selected)||!b.selected.length||b.selected.length>250)throw Error('Selecione de 1 a 250 contatos.');
-   const existing=checked(await db.from('crm_wa_campaigns').select('id').eq('id',b.id).eq('owner_id',user.id).maybeSingle());if(existing)return result({id:existing.id});
+   const existing=checked(await db.from('crm_wa_campaigns').select('id').eq('id',b.id).eq('owner_id',user.id).maybeSingle());if(existing)return reply({id:existing.id});
    const t=await template(b.template_name,b.language),aud=await getAudience(b.segment),wanted=new Set(b.selected);
    const selected=aud.filter(r=>wanted.has(r.phone)&&r.eligible);
    if(selected.length!==wanted.size)throw Error('O público mudou ou contém contatos sem autorização. Atualize a lista antes de preparar.');
    const title=String(b.title||'').trim().slice(0,120);if(!title)throw Error('Dê um nome à campanha.');
    checked(await db.rpc('crm_wa_prepare',{p_id:b.id,p_owner:user.id,p_title:title,p_segment:b.segment,p_name:t.name,p_language:t.language,p_body:(t.components||[]).find((c:any)=>c.type==='BODY').text,
     p_recipients:selected.map(r=>({phone:r.phone,name:r.name,source_kind:r.source_kind,source_id:r.source_id}))}));
-   return result({id:b.id,count:selected.length,template_status:t.status});
+   return reply({id:b.id,count:selected.length,template_status:t.status});
   }
   if(b.action==='send'){
    if(b.confirm!==true)throw Error('Revise e confirme o disparo.');
@@ -193,8 +216,8 @@ Deno.serve(async req=>{
     checked(await db.from('crm_wa_messages').update({status:'accepted'}).eq('id',m.id).eq('status','sending'));
    }
    const remaining=await db.from('crm_wa_messages').select('id',{count:'exact',head:true}).eq('campaign_id',c.id).eq('status','pending');checked(remaining);
-   return result({attempted,remaining:remaining.count||0});
+   return reply({attempted,remaining:remaining.count||0});
   }
-  return result({error:'Ação desconhecida'},400);
- }catch(e:any){return result({error:e.message||'Não foi possível concluir esta operação.'},400);}
+  return reply({error:'Ação desconhecida'},400);
+ }catch(e:any){return reply({error:e.message||'Não foi possível concluir esta operação.'},400);}
 });

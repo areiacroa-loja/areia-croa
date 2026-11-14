@@ -841,7 +841,7 @@ body::before{
       <button class="side-nav-item" data-tab="anuncios" onclick="trocarAba('anuncios')"><i class="ti ti-speakerphone"></i><span>Mídia</span></button>
       <button class="side-nav-item" data-tab="produtos" onclick="trocarAba('produtos')"><i class="ti ti-shirt"></i><span>Produtos</span></button>
       <button class="side-nav-item" data-tab="embalagens" onclick="trocarAba('embalagens')"><i class="ti ti-package"></i><span>Embalagens</span></button>
-      <button class="side-nav-item" data-tab="clientes" onclick="trocarAba('clientes')"><i class="ti ti-users"></i><span>Clientes</span></button>
+      <button class="side-nav-item" data-tab="clientes" onclick="trocarAba('clientes')"><i class="ti ti-users"></i><span>CRM</span></button>
       <button class="side-nav-item" data-tab="historico" onclick="trocarAba('historico')"><i class="ti ti-history"></i><span>Histórico</span></button>
     </nav>
 
@@ -879,7 +879,7 @@ body::before{
     <button class="tab" data-tab="anuncios" onclick="trocarAba('anuncios',this)"><i class="ti ti-speakerphone"></i>Mídia</button>
     <button class="tab" data-tab="metas" onclick="trocarAba('metas',this)"><i class="ti ti-target-arrow"></i>Metas</button>
     <button class="tab" data-tab="marcos" onclick="trocarAba('marcos',this)"><i class="ti ti-flag"></i>Conquistas</button>
-    <button class="tab" data-tab="clientes" onclick="trocarAba('clientes',this)"><i class="ti ti-address-book"></i>Clientes</button>
+    <button class="tab" data-tab="clientes" onclick="trocarAba('clientes',this)"><i class="ti ti-address-book"></i>CRM</button>
   </div>
 
   <!-- DASHBOARD -->
@@ -1324,7 +1324,7 @@ function trocarAba(id, btn) {
     anuncios:['AQUISIÇÃO','Mídia & aquisição'],
     produtos:['CATÁLOGO','Produtos'],
     embalagens:['ESTOQUE','Embalagens'],
-    clientes:['RELACIONAMENTO','Clientes'],
+    clientes:['RELACIONAMENTO','CRM'],
     historico:['REGISTROS','Histórico'],
     metas:['PLANEJAMENTO','Metas'],
     marcos:['CRESCIMENTO','Conquistas']
@@ -2900,7 +2900,7 @@ function renderDashboard(){
     <button class="drawer-item" data-tab="anuncios" onclick="trocarAba('anuncios');fecharDrawer()"><i class="ti ti-speakerphone"></i>Mídia</button>
     <button class="drawer-item" data-tab="metas" onclick="trocarAba('metas');fecharDrawer()"><i class="ti ti-target-arrow"></i>Metas</button>
     <button class="drawer-item" data-tab="marcos" onclick="trocarAba('marcos');fecharDrawer()"><i class="ti ti-flag"></i>Conquistas</button>
-    <button class="drawer-item" data-tab="clientes" onclick="trocarAba('clientes');fecharDrawer()"><i class="ti ti-address-book"></i>Clientes</button>
+    <button class="drawer-item" data-tab="clientes" onclick="trocarAba('clientes');fecharDrawer()"><i class="ti ti-address-book"></i>CRM</button>
   </nav>
 </div>
 <div class="modal-overlay hidden" id="modal-nova-venda" onclick="if(event.target===this)fecharModalNovaVenda()">
