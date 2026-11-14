@@ -5455,25 +5455,36 @@ custoPedidoV9=function(p){return Number(p?.custo_produtos||0)+Number(p?.custo_em
 lucroPedidoV9=function(p){return Number(p?.receita||0)-custoPedidoV9(p)};
 
 // O resumo carrega também os fretes auditáveis e os novos campos do pedido.
-carregarResumoV95=async function({silent=false}={}){
-  if(!silent)perfStatusV95(perfV95.cacheHit?'Atualizando em segundo plano…':'Carregando resumo…');
-  const [ped,anun,met,fr]=await Promise.all([
-    sb.from('pedidos').select('*').order('data',{ascending:false}),
-    sb.from('anuncios').select('id,tipo,data,plataforma,descricao,valor,valor_planejado,valor_gasto,status,data_fim,sessoes,carrinhos_qtd,vendas_qtd,receita_atribuida').order('data',{ascending:false}),
-    sb.from('metas_mensais').select('id,mes,ano,investimento_previsto,faturamento_previsto').order('ano',{ascending:false}).order('mes',{ascending:false}),
-    sb.from('pedido_fretes').select('*').order('created_at',{ascending:true})
-  ]);
-  if(ped.error)throw ped.error;
-  if(anun.error)console.warn('[V10.7] anúncios',anun.error);
-  if(met.error)console.warn('[V10.7] metas',met.error);
-  if(fr.error)console.warn('[V10.7] fretes',fr.error);
-  cache.pedidos=ped.data||[];cache.anuncios=anun.data||[];cache.metas=met.data||[];cache.fretesPedido=fr.data||[];
-  cache.pedidosErro=null;cache.estadoViewErro=null;pedidosSchemaV8=true;
-  popularSelectMes();renderDashboard();
-  if(typeof renderAnuncios==='function'&&perfActiveTabV95()==='anuncios')renderAnuncios();
-  perfSaveV95();
-  if(!silent)perfStatusV95('Supabase sincronizado · custos reais V10.7');
-  return true;
+let resumoSyncV108=null;
+carregarResumoV95=function({silent=false}={}){
+  if(resumoSyncV108)return resumoSyncV108;
+  resumoSyncV108=(async()=>{
+    cache.financialSyncState='loading';renderDashboard();
+    if(!silent)perfStatusV95('Conferindo vendas, custos e mídia no Supabase…');
+    try{
+      // The V10.7 replacement had dropped the V10 integration loader. Never
+      // calculate profit from one device's restored media snapshot.
+      const [ped,anun,met,fr,integrations,aportes,closings]=await Promise.all([
+        sb.from('pedidos').select('*').order('data',{ascending:false}),
+        sb.from('anuncios').select('id,tipo,data,plataforma,descricao,valor,valor_planejado,valor_gasto,status,data_fim,sessoes,carrinhos_qtd,vendas_qtd,receita_atribuida').order('data',{ascending:false}),
+        sb.from('metas_mensais').select('id,mes,ano,investimento_previsto,faturamento_previsto').order('ano',{ascending:false}).order('mes',{ascending:false}),
+        sb.from('pedido_fretes').select('*').order('created_at',{ascending:true}),
+        carregarIntegracoesV10(),carregarAportesV98(),carregarFechamentosV99()
+      ]);
+      if(ped.error||anun.error||integrations!==true||aportes!==true||closings!==true)throw Error('Não foi possível confirmar todos os dados financeiros. Atualize para tentar novamente.');
+      if(met.error)console.warn('[V10.8] metas',met.error);
+      if(fr.error)console.warn('[V10.8] fretes',fr.error);
+      cache.pedidos=ped.data||[];cache.anuncios=anun.data||[];cache.metas=met.data||[];cache.fretesPedido=fr.data||[];
+      cache.pedidosErro=null;cache.estadoViewErro=null;pedidosSchemaV8=true;
+      cache.financialSyncState='ready';cache.financialSyncedAt=new Date().toISOString();
+      popularSelectMes();renderDashboard();
+      if(typeof renderAnuncios==='function'&&perfActiveTabV95()==='anuncios')renderAnuncios();
+      perfSaveV95();
+      if(!silent)perfStatusV95('Supabase sincronizado · vendas, custos e mídia confirmados');
+      return true;
+    }catch(e){cache.financialSyncState='error';renderDashboard();throw e;}
+  })();
+  return resumoSyncV108.finally(()=>{resumoSyncV108=null;});
 };
 
 function toggleBrindeV107(prefix='v107-ped'){
