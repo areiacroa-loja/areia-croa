@@ -27,7 +27,7 @@ test('only text models with the supported first-name variable can be sent',()=>{
  const c=context(),t={components:[{type:'BODY',text:'Olá {{1}}, novidade na loja!'}]};
  assert.equal(c.supportedTemplate(t),true);assert.equal(c.templateText(t,'Ana Silva'),'Olá Ana, novidade na loja!');
  assert.equal(c.supportedTemplate({components:[{type:'BODY',text:'Olá {{2}}'}]}),false);
- assert.equal(c.supportedTemplate({components:[...t.components,{type:'HEADER',format:'IMAGE'}]}),false);
+ assert.equal(c.supportedTemplate({components:[...t.components,{type:'HEADER',format:'IMAGE'}]}),true);assert.equal(c.supportedTemplate({components:[...t.components,{type:'HEADER',format:'VIDEO'}]}),false);
  assert.equal(c.supportedTemplate({components:[]}),false);
 });
 test('purchase association uses the last sent campaign, seven days and paid phone matches only',()=>{
@@ -70,8 +70,9 @@ test('signature reconciliation only trusts the fixed active endpoint belonging t
   if(good){assert.match(await c.signingSecret(),/^whsec_/);await c.signingSecret();assert.equal(calls,1);}else await assert.rejects(c.signingSecret());
  }
 });
-function senderHarness({uncertain=false,approved=true}={}){
+function senderHarness({uncertain=false,approved=true,media=false}={}){
  const campaign={id:'11111111-1111-4111-8111-111111111111',owner_id:'owner',segment:'all',template_name:'novidades',language:'pt_BR',template_body:'Olá {{1}}, novidades na loja!'};
+ if(media)campaign.image_url='https://erp.example.test/storage/v1/object/public/crm-campaign-media/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.png';
  const message={id:'22222222-2222-4222-8222-222222222222',campaign_id:campaign.id,phone:'+5511999999999',name:'Ana Silva',source_kind:'client',source_id:'1',status:'pending'};
  const tables={crm_wa_campaigns:[campaign],crm_wa_messages:[message],crm_wa_preferences:[{phone:message.phone,status:'granted'}],clientes:[{id:1,nome:'Ana Silva',telefone:'11999999999',created_at:'2026-01-01'}],carrinhos_abandonados:[],pedidos:[]};
  const sent=[];let handler;
@@ -80,9 +81,9 @@ function senderHarness({uncertain=false,approved=true}={}){
   const q={select(_cols,options){head=!!options?.head;return q},eq(k,v){filters.push(r=>r[k]===v);return q},in(k,vs){filters.push(r=>vs.includes(r[k]));return q},gte(k,v){filters.push(r=>r[k]>=v);return q},lt(k,v){filters.push(r=>r[k]<v);return q},order(){return q},range(){return q},limit(v){max=v;return q},maybeSingle(){single=true;return q},update(v){mode='update';patch=v;return q},then(resolve,reject){try{const rows=tables[table].filter(r=>filters.every(f=>f(r))).slice(0,max);if(mode==='update')rows.forEach(r=>Object.assign(r,patch));return Promise.resolve({data:head?null:single?rows[0]||null:structuredClone(rows),error:null,count:rows.length}).then(resolve,reject);}catch(e){return Promise.reject(e).then(resolve,reject);}}};return q;
  },rpc:async(_name,{p_id})=>{const m=tables.crm_wa_messages.find(m=>m.id===p_id);if(m.status!=='pending')return {data:false};m.status='sending';m.attempt_at=new Date().toISOString();return {data:true};}};
  const env={SUPABASE_URL:'https://erp.example.test',SUPABASE_SERVICE_ROLE_KEY:'unit-service-only',YCLOUD_API_KEY:'unit-api-only',YCLOUD_WHATSAPP_FROM:'+557588075117'};
- const c=vm.createContext({createClient:()=>db,Deno:{env:{get:k=>env[k]},serve:h=>{handler=h}},Response,Request,URL,AbortSignal,TextEncoder,TextDecoder,crypto,console,fetch:async(url,options)=>{
+ const c=vm.createContext({createClient:()=>db,Deno:{env:{get:k=>env[k]},serve:h=>{handler=h}},Response,Request,URL,AbortSignal,TextEncoder,TextDecoder,crypto,atob,console,fetch:async(url,options)=>{
   if(url.includes('/webhookEndpoints/'))return Response.json({url:env.SUPABASE_URL+'/functions/v1/crm-whatsapp/webhook',status:'active',secret:'whsec_unit_test_only_0123456789'});
-  if(url.includes('/whatsapp/templates/'))return Response.json({name:'novidades',language:'pt_BR',status:approved?'APPROVED':'PENDING',components:[{type:'BODY',text:campaign.template_body}]});
+  if(url.includes('/whatsapp/templates/'))return Response.json({name:'novidades',language:'pt_BR',status:approved?'APPROVED':'PENDING',components:[...(media?[{type:'HEADER',format:'IMAGE'}]:[]),{type:'BODY',text:campaign.template_body}]});
   if(options.method==='POST'&&url.endsWith('/whatsapp/messages')){sent.push(JSON.parse(options.body));if(uncertain)throw Error('connection interrupted after submission');return Response.json({id:'provider-unit-1'});}
   throw Error('Unexpected URL '+url);
  }});
@@ -110,4 +111,16 @@ test('CRM preflight supports both store domains and rejects unrelated origins',a
  }
  const r=await h.request(new Request('https://erp.example.test/functions/v1/crm-whatsapp',{method:'OPTIONS',headers:{Origin:'https://foreign.example'}}));
  assert.equal(r.status,403);assert.equal(r.headers.get('Access-Control-Allow-Origin'),null);
+});
+
+test('image campaigns send the saved photo in the official header with the personalized body',async()=>{
+ const h=senderHarness({media:true});const out=await h.invoke();assert.equal(out.status,200);assert.equal(h.sent.length,1);
+ const parts=h.sent[0].template.components;assert.equal(parts[0].type,'header');assert.equal(parts[0].parameters[0].type,'image');assert.match(parts[0].parameters[0].image.link,/crm-campaign-media/);assert.equal(parts[1].parameters[0].text,'Ana');
+});
+test('artwork validation rejects external URLs, oversized files and forged MIME signatures',()=>{
+ const begin=source.indexOf('function validImageUrl'),end=source.indexOf('const WEBHOOK_SECRET');
+ const c=vm.createContext({URL_BASE:'https://erp.example.test',MEDIA_BUCKET:'crm-campaign-media',URL,atob,Uint8Array});vm.runInContext(stripTypeScriptTypes(source.slice(begin,end)),c);
+ const path='/storage/v1/object/public/crm-campaign-media/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.png';
+ assert.equal(c.validImageUrl('https://erp.example.test'+path),true);assert.equal(c.validImageUrl('https://foreign.example'+path),false);assert.equal(c.validImageUrl('https://erp.example.test'+path+'?token=private'),false);assert.equal(c.validImageUrl('https://erp.example.test/storage/v1/object/public/crm-campaign-media/../../private/a.png'),false);
+ assert.throws(()=>c.imageBytes(Buffer.from('<script>bad</script>').toString('base64'),'image/png'));assert.throws(()=>c.imageBytes('A'.repeat(6990512),'image/jpeg'));assert.throws(()=>c.imageBytes('YWJj','image/svg+xml'));
 });

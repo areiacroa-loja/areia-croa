@@ -18,7 +18,7 @@ function cartConverted(c: any,orders: any[]){
 function supportedTemplate(t: any){
  const body=(t.components||[]).find((c:any)=>c.type==='BODY')?.text||'';
  const variables=[...body.matchAll(/\{\{([^}]+)\}\}/g)].map((m:any)=>m[1]);
- const extra=(t.components||[]).some((c:any)=>c.type!=='BODY'&&c.type!=='FOOTER');
+ const extra=(t.components||[]).some((c:any)=>!['BODY','FOOTER'].includes(c.type)&&!(c.type==='HEADER'&&c.format==='IMAGE'));
  return !!body&&!extra&&variables.every((v:string)=>v==='1');
 }
 function templateText(t: any,name: string){return String((t.components||[]).find((c:any)=>c.type==='BODY')?.text||'').replace(/\{\{1\}\}/g,String(name||'').trim().split(/\s+/)[0]||'cliente');}
@@ -68,6 +68,16 @@ const db=createClient(URL_BASE,SERVICE_KEY,{auth:{persistSession:false}});
 const WABA=Deno.env.get('YCLOUD_WABA_ID')||'1861122401153826';
 const FROM=Deno.env.get('YCLOUD_WHATSAPP_FROM')||'';
 const API_KEY=Deno.env.get('YCLOUD_API_KEY')||'';
+const MEDIA_BUCKET='crm-campaign-media';
+function validImageUrl(value:any){try{const url=new URL(value);return url.origin===URL_BASE&&!url.search&&!url.hash&&/^\/storage\/v1\/object\/public\/crm-campaign-media\/[a-f0-9-]{36}\/[a-f0-9-]{36}\.(png|jpg)$/.test(url.pathname);}catch{return false;}}
+function imageHeader(t:any){return (t.components||[]).some((c:any)=>c.type==='HEADER'&&c.format==='IMAGE');}
+function imageBytes(base64:any,mime:any){
+ if(!['image/png','image/jpeg'].includes(mime)||typeof base64!=='string'||base64.length>6990510||!base64||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))throw Error('Escolha uma imagem PNG ou JPG de até 5 MB.');
+ let bytes;try{bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));}catch{throw Error('Arquivo de imagem inválido.');}
+ if(!bytes.length||bytes.length>5242880)throw Error('A imagem deve ter até 5 MB.');
+ const png=[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v),jpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
+ if((mime==='image/png'&&!png)||(mime==='image/jpeg'&&!jpg))throw Error('O conteúdo do arquivo não corresponde a uma imagem PNG ou JPG.');return bytes;
+}
 const WEBHOOK_SECRET=(Deno.env.get('YCLOUD_WEBHOOK_SECRET')||'').trim();
 const WEBHOOK_ID=Deno.env.get('YCLOUD_WEBHOOK_ID')||'6af79e06a9e8a64e618a7918';
 let webhookCache:{secret:string,time:number}|null=null;
@@ -94,15 +104,16 @@ async function signingSecret(){
  webhookCache={secret:endpoint.secret,time:Date.now()};return endpoint.secret;
 }
 async function templates(){
+ const media=checked(await db.from('crm_wa_template_media').select('template_name,language,image_url').eq('waba_id',WABA))||[];
  const out:any[]=[];for(let page=1;page<=50;page++){
   const p=await yc('/whatsapp/templates?filter.wabaId='+WABA+'&limit=100&page='+page);
-  const rows=p.items||[];out.push(...rows);if(rows.length<100)return out.map(t=>({...t,supported:supportedTemplate(t)}));
+  const rows=p.items||[];out.push(...rows);if(rows.length<100)return out.map(t=>({...t,supported:supportedTemplate(t),image_url:media.find((m:any)=>m.template_name===t.name&&m.language===t.language)?.image_url||''}));
  }throw Error('Muitos modelos. Refine a conta no provedor.');
 }
 async function template(name:string,language:string){
  if(!/^[a-z0-9_]{1,512}$/.test(name||'')||!/^\w{2,10}$/.test(language||''))throw Error('Modelo inválido.');
  const t=await yc('/whatsapp/templates/'+WABA+'/'+encodeURIComponent(name)+'/'+encodeURIComponent(language));
- if(!supportedTemplate(t))throw Error('Este modelo usa mídia ou variáveis ainda não suportadas. Use texto com o primeiro nome em {{1}}.');
+ if(!supportedTemplate(t))throw Error('Use um modelo de texto ou imagem PNG/JPG, com o primeiro nome em {{1}}. Vídeos e botões ainda não estão disponíveis.');
  return t;
 }
 async function getAudience(segment:string){
@@ -162,6 +173,11 @@ Deno.serve(async req=>{
   if(b.action==='audience')return reply({rows:await getAudience(b.segment||'carts')});
   if(b.action==='history')return reply(await history(user.id));
   if(b.action==='analytics')return reply(await analytics(user.id));
+  if(b.action==='upload_image'){
+   const bytes=imageBytes(b.base64,b.mime),path=user.id+'/'+crypto.randomUUID()+(b.mime==='image/png'?'.png':'.jpg');
+   checked(await db.storage.from(MEDIA_BUCKET).upload(path,bytes,{contentType:b.mime,upsert:false}));
+   return reply({url:URL_BASE+'/storage/v1/object/public/'+MEDIA_BUCKET+'/'+path});
+  }
   if(b.action==='create_template'){
    let name=String(b.name||'').trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,110);
    if(name&&!/^[a-z]/.test(name))name='campanha_'+name;
@@ -170,7 +186,10 @@ Deno.serve(async req=>{
    if([...body.matchAll(/\{\{([^}]+)\}\}/g)].some(m=>m[1]!=='1'))throw Error('Use apenas {{1}} para o primeiro nome.');
    const component:any={type:'BODY',text:body};
    if(body.includes('{{1}}'))component.example={body_text:[['Ana']]};
-   const created=await yc('/whatsapp/templates','POST',{wabaId:WABA,name,language:'pt_BR',category:'MARKETING',components:[component]});
+   if(b.image_url&&!validImageUrl(b.image_url))throw Error('Envie a foto pelo campo de imagem antes de cadastrar o modelo.');
+   const components=b.image_url?[{type:'HEADER',format:'IMAGE',example:{header_url:[b.image_url]}},component]:[component];
+   const created=await yc('/whatsapp/templates','POST',{wabaId:WABA,name,language:'pt_BR',category:'MARKETING',components});
+   if(b.image_url)checked(await db.from('crm_wa_template_media').upsert({waba_id:WABA,template_name:name,language:'pt_BR',image_url:b.image_url,created_by:user.id}));
    return reply({name:created.name,status:created.status});
   }
   if(b.action==='preference'){
@@ -182,10 +201,11 @@ Deno.serve(async req=>{
    if(!/^[a-f0-9-]{36}$/i.test(b.id||'')||!Array.isArray(b.selected)||!b.selected.length||b.selected.length>250)throw Error('Selecione de 1 a 250 contatos.');
    const existing=checked(await db.from('crm_wa_campaigns').select('id').eq('id',b.id).eq('owner_id',user.id).maybeSingle());if(existing)return reply({id:existing.id});
    const t=await template(b.template_name,b.language),aud=await getAudience(b.segment),wanted=new Set(b.selected);
+   const image=imageHeader(t)?b.image_url:null;if(imageHeader(t)&&!validImageUrl(image))throw Error('Escolha a foto que será enviada com este modelo.');
    const selected=aud.filter(r=>wanted.has(r.phone)&&r.eligible);
    if(selected.length!==wanted.size)throw Error('O público mudou ou contém contatos sem autorização. Atualize a lista antes de preparar.');
    const title=String(b.title||'').trim().slice(0,120);if(!title)throw Error('Dê um nome à campanha.');
-   checked(await db.rpc('crm_wa_prepare',{p_id:b.id,p_owner:user.id,p_title:title,p_segment:b.segment,p_name:t.name,p_language:t.language,p_body:(t.components||[]).find((c:any)=>c.type==='BODY').text,
+   checked(await db.rpc('crm_wa_prepare_media',{p_id:b.id,p_owner:user.id,p_title:title,p_segment:b.segment,p_name:t.name,p_language:t.language,p_body:(t.components||[]).find((c:any)=>c.type==='BODY').text,p_image:image,
     p_recipients:selected.map(r=>({phone:r.phone,name:r.name,source_kind:r.source_kind,source_id:r.source_id}))}));
    return reply({id:b.id,count:selected.length,template_status:t.status});
   }
@@ -194,6 +214,7 @@ Deno.serve(async req=>{
    await signingSecret();
    const c=await ownerCampaign(b.id,user.id),t=await template(c.template_name,c.language);
    if(t.status!=='APPROVED')throw Error('A Meta ainda não aprovou este modelo.');
+   if(imageHeader(t)&&!validImageUrl(c.image_url))throw Error('Esta campanha não tem uma foto válida. Prepare uma nova campanha com imagem.');
    if((t.components||[]).find((x:any)=>x.type==='BODY')?.text!==c.template_body)throw Error('O modelo mudou. Prepare uma nova campanha para revisar o texto.');
    const pending=checked(await db.from('crm_wa_messages').select('*').eq('campaign_id',c.id).eq('status','pending').order('id').limit(3))||[];
    const audience=await getAudience(c.segment);let attempted=0;
@@ -203,10 +224,13 @@ Deno.serve(async req=>{
     if(!checked(await db.rpc('crm_wa_claim',{p_id:m.id})))continue;
     attempted++;
     const hasVariable=/\{\{1\}\}/.test(c.template_body);
+    const components:any[]=[];
+    if(imageHeader(t))components.push({type:'header',parameters:[{type:'image',image:{link:c.image_url}}]});
+    if(hasVariable)components.push({type:'body',parameters:[{type:'text',text:String(match.name).trim().split(/\s+/)[0]||'cliente'}]});
     let sent:any;
     try {
      sent=await yc('/whatsapp/messages','POST',{from:FROM,to:m.phone,type:'template',externalId:m.id,
-      template:{name:c.template_name,language:{code:c.language},...(hasVariable?{components:[{type:'body',parameters:[{type:'text',text:String(match.name).trim().split(/\s+/)[0]||'cliente'}]}]}:{})}});
+      template:{name:c.template_name,language:{code:c.language},...(components.length?{components}:{})}});
     }catch(e:any){
      const state=e.httpStatus&&e.httpStatus<500?'failed':'unknown';
      checked(await db.from('crm_wa_messages').update({status:state,error:state==='unknown'?'Resposta de envio incerta. Confira no provedor; não haverá reenvio automático.':e.message}).eq('id',m.id).eq('status','sending'));continue;
