@@ -3,6 +3,29 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm');
 const {stripTypeScriptTypes}=require('node:module');
 const source=fs.readFileSync(__dirname+'/yampi-webhook.ts','utf8');
+
+function clockRetry(){
+ const c=vm.createContext({Request,Response,URL,fetch,setTimeout});
+ vm.runInContext(stripTypeScriptTypes(source.slice(source.indexOf('async function fetchWithClockSkewRetry'),source.indexOf('const sb ='))),c);
+ return c.fetchWithClockSkewRetry;
+}
+test('transient future JWT rejection retries the exact body before a successful write',async()=>{
+ const retry=clockRetry(),bodies=[],waits=[];let calls=0;
+ const response=await retry('https://erp.example.test/rest/v1/pedidos',{method:'POST',headers:{Authorization:'Bearer unit-test-only'},body:'{"referencia":"test"}'},async req=>{
+  calls++;bodies.push(await req.text());assert.equal(req.headers.get('Authorization'),'Bearer unit-test-only');
+  return calls<3?Response.json({code:'PGRST303',message:'JWT issued at future'},{status:401}):Response.json({id:1});
+ },async ms=>{waits.push(ms);});
+ assert.equal(response.status,200);assert.equal((await response.json()).id,1);assert.equal(calls,3);assert.deepEqual(bodies,Array(3).fill('{"referencia":"test"}'));assert.deepEqual(waits,[500,1500]);
+});
+test('clock skew retries are bounded and never replay generic auth errors, 5xx or uncertain writes',async()=>{
+ const retry=clockRetry();let calls=0;
+ const response=await retry('https://erp.example.test',undefined,async()=>{calls++;return Response.json({code:'PGRST303',message:'JWT issued at future'},{status:401});},async()=>{});
+ assert.equal(response.status,401);assert.equal(calls,4);assert.equal((await response.json()).code,'PGRST303');
+ for(const [status,payload] of [[401,{code:'PGRST301',message:'JWT expired'}],[500,{code:'PGRST303',message:'JWT issued at future'}],[401,{code:'PGRST303',message:'Invalid token'}]]){
+  let tries=0;await retry('https://erp.example.test',undefined,async()=>{tries++;return Response.json(payload,{status});},async()=>{});assert.equal(tries,1);
+ }
+ let tries=0;await assert.rejects(retry('https://erp.example.test',{method:'POST',body:'{}'},async()=>{tries++;throw Error('Connection lost after write');},async()=>{}));assert.equal(tries,1);
+});
 test('named sales campaigns from Instagram retain traffic evidence without a Meta ID',()=>{
  const c=vm.createContext({});
  vm.runInContext(stripTypeScriptTypes(source.slice(source.indexOf('function isPaidTraffic'),source.indexOf('async function resolveMetaCampaign'))),c);

@@ -5,8 +5,29 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const YAMPI_WEBHOOK_SECRET = Deno.env.get("YAMPI_WEBHOOK_SECRET") || "";
 const PACKAGING_COST = 5; // V10.7: embalagem padrão definida pela operação
 
+// Supabase may briefly reject a freshly issued gateway JWT when clocks differ.
+// Retry only this explicit pre-execution authentication rejection. Never retry
+// an ambiguous network failure, a generic 401, or a 5xx database write.
+async function fetchWithClockSkewRetry(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  transport: typeof fetch = fetch,
+  wait: (ms: number) => Promise<void> = (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+) {
+  const request = new Request(input, init);
+  const delays = [500, 1500, 3000];
+  for (let attempt = 0; ; attempt++) {
+    const response = await transport(request.clone());
+    if (response.status !== 401 || attempt >= delays.length) return response;
+    const error = await response.clone().json().catch(() => null);
+    if (error?.code !== 'PGRST303' || !/JWT issued at future/i.test(String(error?.message || ''))) return response;
+    await wait(delays[attempt]);
+  }
+}
+
 const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: fetchWithClockSkewRetry },
 });
 
 function json(data: unknown, status = 200) {
