@@ -22,7 +22,7 @@ function renderFinancial(){
   if(failed)$('ac-retry-finance').onclick=()=>carregarTudo().catch(()=>{});return;
  }
  const [year,mo]=month.split('-').map(Number),goal=month?(cache.metas||[]).find(m=>Number(m.ano)===year&&Number(m.mes)===mo):null,target=Number(goal?.faturamento_previsto||0),progress=target>0?d.revenue/target*100:0;
- const segments=[['Custos operacionais',d.cost,'#91A9B8'],['Tráfego pago',d.ads,'#E9C579'],['Lucro líquido',d.profit,'#28A477']];
+ const segments=[['Custos operacionais',d.cost,'#6e85ae'],['Tráfego pago',d.ads,'#9e8cff'],['Lucro líquido',d.profit,'#5bdbd3']];
  // A negative result cannot be a positive slice of revenue. Keep exact signed figures and explicitly label the alternate denominator.
  const denominator=d.profit<0?Math.max(d.cost+d.ads,1):Math.max(d.revenue,1);
  root.innerHTML=`<section class="ac-surface ac-hero"><div><div class="ac-muted">Lucro líquido ${month?'do mês':'do período'}</div><div class="ac-hero-value ${d.profit<0?'ac-negative':''}">${fmtVal(d.profit)}</div>${badge(d.profit>0?'Positivo':d.profit<0?'Negativo':'Sem resultado',d.profit<0?'error':d.profit>0?'ok':'')} <span class="ac-muted">${esc(label)}</span><small class="ac-finance-confirmed">Vendas, custos e mídia conferidos · ${esc(new Date(cache.financialSyncedAt).toLocaleString('pt-BR',{timeZone:'America/Bahia'}))}</small></div><div class="ac-hero-goal"><div class="ac-muted">Meta de faturamento</div>${target>0?`<div class="ac-goal-value">${percent(progress)} atingida</div><div class="ac-track" role="progressbar" aria-label="Meta de faturamento" aria-valuenow="${Math.min(100,Math.max(0,progress))}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(100,Math.max(0,progress))}%"></span></div><div class="ac-between ac-muted"><span>${fmtVal(d.revenue)} de ${fmtVal(target)}</span><span>${progress>=100?'Meta alcançada':'Faltam '+fmtVal(Math.max(0,target-d.revenue))}</span></div>`:`<p>${month?'Nenhuma meta de faturamento neste mês.':'Selecione um mês para acompanhar sua meta.'}</p><button class="btn" data-ac-tab="metas">${icon('target-arrow')} Ver metas</button>`}</div></section>
@@ -93,7 +93,7 @@ async function syncProvider(id){
 }
 function init(){
  const workspace=document.querySelector('.workspace');if(!workspace||$('panel-integracoes'))return;
- document.documentElement.dataset.design='ac-white';
+ document.documentElement.dataset.design='ac-dark';
  document.querySelectorAll('.sidebar-home-logo,.login-logo,.topbar-brand img').forEach(logo=>{logo.src='logo-areia-croa-positive-horizontal.png';logo.alt='AREIA CRÔA';});
  const drawerBrand=document.querySelector('.drawer-header span');if(drawerBrand){const image=document.createElement('img');image.src='logo-areia-croa-positive-horizontal.png';image.alt='AREIA CRÔA';image.className='ac-drawer-logo';drawerBrand.replaceChildren(image);}
 
@@ -148,5 +148,43 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  document.addEventListener('click',event=>{if(active?.id==='drawer-overlay'&&event.target.closest('.drawer-item[data-tab]'))scrollY=0;},true);
  document.addEventListener('keydown',event=>{if(!active||!media.matches)return;if(event.key==='Escape'){event.preventDefault();close(active);return;}if(event.key!=='Tab')return;const targets=[...active.querySelectorAll('button,a[href],input,select,textarea,[tabindex="0"]')].filter(e=>!e.disabled&&e.getClientRects().length);if(!targets.length){event.preventDefault();return;}const first=targets[0],last=targets.at(-1);if(event.shiftKey&&(document.activeElement===first||!active.contains(document.activeElement))){event.preventDefault();last.focus();}else if(!event.shiftKey&&(document.activeElement===last||!active.contains(document.activeElement))){event.preventDefault();first.focus();}});
  window.addEventListener('resize',queue,{passive:true});window.visualViewport?.addEventListener('resize',viewport,{passive:true});media.addEventListener('change',queue);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+/* Peak Chart by Louis Studios, adapted from the supplied React component.
+ * Uses its monotone Steffen interpolation; native SVG, real paid orders, shared period.
+ * No demo values, additional runtime, network requests or financial mutations. */
+(()=>{
+ 'use strict';
+ function curve(values){
+  const data=values.length===1?[values[0],values[0]]:values,n=data.length;
+  if(!n)return '';
+  const max=Math.max(1,...data),ys=data.map(v=>154-v/max*128),step=636/Math.max(1,n-1),slopes=[];
+  for(let i=0;i<n-1;i++)slopes.push((ys[i+1]-ys[i])/step);
+  const tangent=[slopes[0]||0];
+  for(let i=1;i<n-1;i++){const a=slopes[i-1],b=slopes[i];tangent.push((Math.sign(a)+Math.sign(b))*Math.min(Math.abs(a),Math.abs(b),.25*Math.abs(a+b)));}
+  tangent.push(slopes[n-2]||0);
+  let path=`M32,${ys[0].toFixed(2)}`;
+  for(let i=0;i<n-1;i++){const x=32+i*step;path+=` C${(x+step/3).toFixed(2)},${(ys[i]+tangent[i]*step/3).toFixed(2)} ${(x+step*2/3).toFixed(2)},${(ys[i+1]-tangent[i+1]*step/3).toFixed(2)} ${(x+step).toFixed(2)},${ys[i+1].toFixed(2)}`;}
+  return path;
+ }
+ function renderPeak(){
+  const root=document.getElementById('ac-financial'),hero=root?.querySelector('.ac-hero');
+  if(!hero||cache.financialSyncState!=='ready'||typeof pedidosBaseV9!=='function')return;
+  const month=document.getElementById('filter-mes')?.value||'',orders=pedidosBaseV9().filter(p=>!month||getMes(p.data)===month),sums=new Map();
+  orders.forEach(p=>{const key=String(p.data||'').slice(0,month?10:7);if(/^\d{4}-\d{2}(?:-\d{2})?$/.test(key))sums.set(key,(sums.get(key)||0)+Number(p.receita||0));});
+  let keys=[...sums.keys()].sort();
+  if(month){const [y,m]=month.split('-').map(Number);keys=Array.from({length:new Date(y,m,0).getDate()},(_,i)=>month+'-'+String(i+1).padStart(2,'0'));}
+  else if(keys.length){const start=new Date(keys[0]+'-01T12:00:00Z'),end=new Date(keys.at(-1)+'-01T12:00:00Z');keys=[];for(let date=start;date<=end&&keys.length<240;date.setUTCMonth(date.getUTCMonth()+1))keys.push(date.toISOString().slice(0,7));}
+  const vals=keys.map(k=>sums.get(k)||0),total=orders.reduce((s,p)=>s+Number(p.receita||0),0),max=Math.max(1,...vals),peak=vals.length?vals.indexOf(Math.max(...vals)):0;
+  const label=k=>month?k.slice(-2)+'/'+month.slice(-2):new Date(k+'-01T12:00:00Z').toLocaleDateString('pt-BR',{month:'short',year:'2-digit',timeZone:'UTC'}),esc=v=>escHtml(String(v));
+  let shell=document.getElementById('ac-peak-chart');if(!shell){shell=document.createElement('section');shell.id='ac-peak-chart';shell.className='ac-peak';shell.setAttribute('aria-label','Evolução da receita paga');}hero.after(shell);
+  const old=document.getElementById('ac-revenue-trend');if(old)old.hidden=true;
+  const line=curve(vals),points=vals.map((v,i)=>({x:32+i*636/Math.max(vals.length-1,1),y:154-v/max*128})),ticks=keys.map((k,i)=>({k,i})).filter(({i})=>i===0||i===keys.length-1||i%Math.max(1,Math.ceil(keys.length/5))===0);
+  shell.innerHTML=`<div><div class="ac-peak-head"><div><span class="ac-peak-eyebrow">Performance · receita paga</span><h3>Seu negócio em movimento</h3></div><span class="ac-peak-period">${esc(periodoLabel(month))}</span></div>${vals.length?`<svg viewBox="0 0 700 190" role="group" aria-label="Receita ${month?'por dia':'por mês'}; use Tab para consultar cada ponto"><defs><linearGradient id="ac-peak-fill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#428aff" stop-opacity=".35"/><stop offset="1" stop-color="#428aff" stop-opacity="0"/></linearGradient></defs>${[0,.5,1].map(v=>`<line class="ac-peak-grid" x1="32" x2="668" y1="${154-v*128}" y2="${154-v*128}" stroke-dasharray="3 6"/>`).join('')}<path d="${line} L668,154 L32,154 Z" fill="url(#ac-peak-fill)"/><path class="ac-peak-line" d="${line}"/>${points.length?`<circle cx="${points[peak].x}" cy="${points[peak].y}" r="5"/>`:''}${points.map((p,i)=>`<rect class="ac-peak-point" data-peak-index="${i}" x="${p.x-318/Math.max(vals.length-1,1)}" y="16" width="${636/Math.max(vals.length-1,1)}" height="143" tabindex="0" role="img" aria-label="${esc(label(keys[i]))}: ${esc(fmtVal(vals[i]))}"><title>${esc(label(keys[i]))}: ${esc(fmtVal(vals[i]))}</title></rect>`).join('')}${ticks.map(({k,i})=>`<text x="${points[i].x}" y="181" text-anchor="middle">${esc(label(k))}</text>`).join('')}</svg>`:'<p class="ac-peak-no-data">Nenhuma receita paga neste período.</p>'}<details><summary>Consultar valores ${month?'por dia':'por mês'}</summary><div>${keys.map((k,i)=>`<span>${esc(label(k))}<b>${fmtVal(vals[i])}</b></span>`).join('')}</div></details></div><aside class="ac-peak-side"><span>Receita no período</span><strong>${fmtVal(total)}</strong><div class="ac-peak-readout" aria-live="polite">${vals.length?'Maior receita · '+esc(label(keys[peak])):'Sem vendas pagas'}<b>${fmtVal(vals[peak]||0)}</b></div><p class="ac-peak-caption">${orders.length} pedidos pagos · mesmo período do resumo financeiro.<br>Toque ou navegue pelos pontos para ver os valores.</p></aside>`;
+  const readout=shell.querySelector('.ac-peak-readout'),show=i=>{readout.replaceChildren(document.createTextNode(label(keys[i])));const value=document.createElement('b');value.textContent=fmtVal(vals[i]);readout.append(value);};
+  shell.querySelectorAll('[data-peak-index]').forEach(el=>{const i=Number(el.dataset.peakIndex);el.addEventListener('pointerenter',()=>show(i));el.addEventListener('pointerdown',()=>show(i));el.addEventListener('focus',()=>show(i));});
+ }
+ let pending=false;function queuePeak(){if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;renderPeak();});}
+ function init(){const root=document.getElementById('ac-financial');if(!root)return;new MutationObserver(records=>{if(records.some(r=>r.target===root&&[...r.addedNodes].some(n=>n.nodeType===1&&n.id!=='ac-peak-chart')))queuePeak();}).observe(root,{childList:true});document.getElementById('filter-mes')?.addEventListener('change',queuePeak);queuePeak();}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
