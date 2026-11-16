@@ -173,7 +173,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   const month=document.getElementById('filter-mes')?.value||'',orders=pedidosBaseV9().filter(p=>!month||getMes(p.data)===month),sums=new Map();
   orders.forEach(p=>{const key=String(p.data||'').slice(0,month?10:7);if(/^\d{4}-\d{2}(?:-\d{2})?$/.test(key))sums.set(key,(sums.get(key)||0)+Number(p.receita||0));});
   let keys=[...sums.keys()].sort();
-  if(month){const [y,m]=month.split('-').map(Number);keys=Array.from({length:new Date(y,m,0).getDate()},(_,i)=>month+'-'+String(i+1).padStart(2,'0'));}
+  if(month){const [y,m]=month.split('-').map(Number),today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Bahia'}),days=month===today.slice(0,7)?Number(today.slice(-2)):new Date(y,m,0).getDate();keys=Array.from({length:days},(_,i)=>month+'-'+String(i+1).padStart(2,'0'));}
   else if(keys.length){const start=new Date(keys[0]+'-01T12:00:00Z'),end=new Date(keys.at(-1)+'-01T12:00:00Z');keys=[];for(let date=start;date<=end&&keys.length<240;date.setUTCMonth(date.getUTCMonth()+1))keys.push(date.toISOString().slice(0,7));}
   const vals=keys.map(k=>sums.get(k)||0),total=orders.reduce((s,p)=>s+Number(p.receita||0),0),max=Math.max(1,...vals),peak=vals.length?vals.indexOf(Math.max(...vals)):0;
   const label=k=>month?k.slice(-2)+'/'+month.slice(-2):new Date(k+'-01T12:00:00Z').toLocaleDateString('pt-BR',{month:'short',year:'2-digit',timeZone:'UTC'}),esc=v=>escHtml(String(v));
