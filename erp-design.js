@@ -194,7 +194,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (()=>{
  'use strict';let busy=false,revision='',lastProbe=0;
  const tab=()=>typeof perfActiveTabV95==='function'?perfActiveTabV95():'dashboard';
- function canRefresh(){const root=document.getElementById('app-root');return root&&!root.classList.contains('hidden')&&!document.hidden&&['dashboard','vendas','metas','historico','anuncios'].includes(tab())&&![...document.querySelectorAll('.modal-overlay,#drawer-overlay')].some(e=>!e.classList.contains('hidden')&&getComputedStyle(e).display!=='none')&&!(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&document.activeElement?.closest('form,.form-grid,.modal-overlay'));}
+ function canRefresh(){const root=document.getElementById('app-root');return root&&!root.classList.contains('hidden')&&!document.hidden&&['dashboard','vendas','metas','historico','anuncios','marcos'].includes(tab())&&![...document.querySelectorAll('.modal-overlay,#drawer-overlay')].some(e=>!e.classList.contains('hidden')&&getComputedStyle(e).display!=='none')&&!(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&document.activeElement?.closest('form,.form-grid,.modal-overlay'));}
  function cachedRevision(){const rows=Array.isArray(cache.pedidos)?cache.pedidos:[];const latest=[...rows].sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')))[0];return latest?String(latest.id)+'|'+String(latest.updated_at||''):'';}
  async function check(){
   if(busy||!canRefresh()||Date.now()-lastProbe<15000||cache.financialSyncState!=='ready')return;
@@ -276,7 +276,7 @@ function acStockValuation(products,includeInactive=false){
  function normalize(){
   scheduled=false;if(document.documentElement.dataset.design!=='ac-dark')return;
   const scope=document.getElementById('app-root');if(!scope)return;
-  const nodes=[...scope.querySelectorAll('div,section,article,header,footer,nav,form,table,thead,tbody,tr,td,th,p,span,small,strong,b,label,button,summary')].filter(e=>e.getClientRects().length&&!e.closest('svg'));
+  const nodes=[...scope.querySelectorAll('div,section,article,header,footer,nav,form,table,thead,tbody,tr,td,th,p,span,small,strong,b,label,button,summary')].filter(e=>e.getClientRects().length&&!e.closest('svg,.ac-award-ticket'));
   document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(modal=>nodes.push(...modal.querySelectorAll('div,p,span,small,strong,b,label,button')));
   for(const el of nodes){const style=getComputedStyle(el),bg=rgb(style.backgroundColor);if(bg&&bg.slice(0,3).every(v=>v>215)&&(bg.length===3||bg[3]>.95)){el.style.setProperty('background','#152033','important');el.style.setProperty('border-color','#34445d','important');}}
   for(const el of nodes){
@@ -289,5 +289,32 @@ function acStockValuation(products,includeInactive=false){
  }
  function queue(){if(scheduled)return;scheduled=true;setTimeout(normalize,120);}
  function init(){const app=document.getElementById('app-root');if(!app)return;new MutationObserver(queue).observe(app,{childList:true,subtree:true});document.addEventListener('click',queue);document.addEventListener('change',queue);queue();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+/* Achievement tickets — geometry adapted from the supplied AdmitOneTicket reference.
+ * Five requested tiers, canonical paid-order revenue and no fictional awards. */
+const AC_AWARD_TIERS=[{value:25000,color:'silver',name:'Prata',edition:'SILVER'},{value:50000,color:'royal',name:'Azul royal',edition:'ROYAL BLUE'},{value:100000,color:'white',name:'Branco',edition:'WHITE EDITION'},{value:500000,color:'gold',name:'Dourado',edition:'GOLD EDITION'},{value:1000000,color:'black',name:'Black',edition:'BLACK EDITION'}];
+function acAwardProgress(total){
+ const revenue=Math.max(0,Number(total)||0);let previous=0;
+ return AC_AWARD_TIERS.map(tier=>{const reached=revenue>=tier.value,current=!reached&&revenue>=previous,percent=reached?100:current?Math.min(100,Math.max(0,(revenue-previous)/(tier.value-previous)*100)):0;previous=tier.value;return {...tier,reached,current,percent,remaining:Math.max(0,tier.value-revenue)};});
+}
+(()=>{
+ 'use strict';
+ // Preserve the reference's 741 × 425 frame, rounded corners and perforation notches.
+ const shape='M25 0 L541 0 A21 21 0 0 0 583 0 L716 0 A25 25 0 0 1 741 25 L741 400 A25 25 0 0 1 716 425 L583 425 A21 21 0 0 0 541 425 L25 425 A25 25 0 0 1 0 400 L0 25 A25 25 0 0 1 25 0 Z';
+ const esc=v=>escHtml(String(v));
+ function renderAwards(){
+  const list=document.getElementById('marcos-lista'),hero=document.getElementById('marcos-resumo');if(!list||!hero)return;
+  const total=pedidosBaseV9().reduce((sum,p)=>sum+Number(p.receita||0),0),tiers=acAwardProgress(total),next=tiers.find(t=>!t.reached),count=tiers.filter(t=>t.reached).length;
+  hero.innerHTML=`<section class="ac-award-summary"><div><span class="ac-award-eyebrow">Sua coleção de conquistas</span><div class="ac-award-total">${fmtVal(total)}</div><p>Faturamento acumulado de pedidos pagos · todo o período</p></div><div class="ac-award-next"><span>${count} de ${tiers.length} prêmios conquistados</span><strong>${next?'Próximo: '+fmtVal(next.value):'Coleção completa'}</strong><p>${next?'Faltam '+fmtVal(next.remaining)+' para a edição '+esc(next.name)+'.':'Você alcançou todos os marcos da coleção.'}</p></div></section>`;
+  list.innerHTML=tiers.map((tier,index)=>{
+   const id='ac-award-'+tier.color,amount=tier.value===1000000?'1 MILHÃO':String(tier.value/1000)+' MIL',status=tier.reached?'Conquista alcançada':tier.current?'Sua próxima conquista':'Próximo patamar';
+   return `<article class="ac-award-ticket ac-award-${tier.color} ${tier.reached?'is-earned':tier.current?'is-next':'is-locked'}" aria-label="Prêmio ${esc(tier.name)}, ${esc(fmtVal(tier.value))}, ${status}" data-award-color="${tier.color}"><svg class="ac-award-art" viewBox="0 0 741 425" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="${id}-metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="var(--ticket-light)"/><stop offset=".33" stop-color="var(--ticket-mid)"/><stop offset=".55" stop-color="var(--ticket-light)"/><stop offset=".77" stop-color="var(--ticket-dark)"/><stop offset="1" stop-color="var(--ticket-mid)"/></linearGradient><linearGradient id="${id}-shine" x1="0" x2="1"><stop stop-color="#ffffff" stop-opacity="0"/><stop offset=".5" stop-color="#ffffff" stop-opacity=".23"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></linearGradient><pattern id="${id}-grain" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".6" fill="var(--ticket-ink)" opacity=".12"/><circle cx="4" cy="4" r=".4" fill="#fff" opacity=".3"/></pattern></defs><path d="${shape}" fill="url(#${id}-metal)" stroke="var(--ticket-edge)" stroke-width="2"/><path d="${shape}" fill="url(#${id}-grain)"/><path class="ac-award-shine" d="${shape}" fill="url(#${id}-shine)"/><path d="M562 31 V394" stroke="var(--ticket-ink)" opacity=".28" stroke-width="1.5" stroke-dasharray="5 8"/><path d="M28 24 H519 M28 401 H519" stroke="var(--ticket-ink)" stroke-opacity=".18" fill="none"/></svg><div class="ac-award-main"><div class="ac-award-top"><span>AREIA CRÔA</span><span>PRÊMIO Nº ${String(index+1).padStart(2,'0')}</span></div><p class="ac-award-edition">${esc(tier.edition)}</p><h3 class="ac-award-value">${amount}</h3><p class="ac-award-description">em faturamento acumulado</p><div class="ac-award-bottom"><span class="ac-award-state">${tier.reached?'✓ ':tier.current?'↗ ':'◇ '}${status}</span><span class="ac-award-material">${esc(tier.name)}</span></div></div><div class="ac-award-stub" aria-hidden="true"><span>${tier.reached?'CONQUISTADO':'AREIA CRÔA'}</span><div class="ac-award-barcode"></div><small>${String(tier.value).padStart(7,'0')}</small></div></article><div class="ac-award-progress"><div><span>${tier.reached?'Patamar alcançado':tier.current?'Faltam '+fmtVal(tier.remaining):'Ainda não iniciado'}</span><b>${tier.percent.toLocaleString('pt-BR',{maximumFractionDigits:1})}%</b></div><div class="ac-award-track" role="progressbar" aria-label="Progresso para ${esc(fmtVal(tier.value))}" aria-valuenow="${tier.percent}" aria-valuemin="0" aria-valuemax="100"><span style="width:${tier.percent}%"></span></div></div>`;
+  }).map((html,index)=>`<div class="ac-award-slot" data-tier="${tiers[index].value}">${html}</div>`).join('');
+  if(matchMedia('(hover: hover) and (pointer: fine)').matches&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+   list.querySelectorAll('.ac-award-ticket').forEach(card=>{let frame=0;card.addEventListener('pointermove',event=>{const rect=card.getBoundingClientRect(),x=(event.clientX-rect.left)/rect.width-.5,y=(event.clientY-rect.top)/rect.height-.5;if(frame)cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{card.style.transform=`perspective(1200px) rotateX(${-y*7}deg) rotateY(${x*7}deg) translateY(-3px)`;frame=0;});});card.addEventListener('pointerleave',()=>{if(frame)cancelAnimationFrame(frame);frame=0;card.style.transform='';});});
+  }
+ }
+ function init(){if(!document.getElementById('panel-marcos'))return;if(typeof MARCOS_TIERS!=='undefined'&&Array.isArray(MARCOS_TIERS))MARCOS_TIERS.splice(0,MARCOS_TIERS.length,...AC_AWARD_TIERS.map(t=>t.value));renderMarcosV95=renderAwards;renderMarcos=renderAwards;renderAwards();}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
