@@ -188,3 +188,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  function init(){const root=document.getElementById('ac-financial');if(!root)return;new MutationObserver(records=>{if(records.some(r=>r.target===root&&[...r.addedNodes].some(n=>n.nodeType===1&&n.id!=='ac-peak-chart')))queuePeak();}).observe(root,{childList:true});document.getElementById('filter-mes')?.addEventListener('change',queuePeak);queuePeak();}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
+/* Visible ERP views follow order changes without requiring a page reload.
+ * A lightweight revision probe precedes the existing full financial sync.
+ * Editing, hidden tabs and CRM campaign composition are never refreshed. */
+(()=>{
+ 'use strict';let busy=false,revision='',lastProbe=0;
+ const tab=()=>typeof perfActiveTabV95==='function'?perfActiveTabV95():'dashboard';
+ function canRefresh(){const root=document.getElementById('app-root');return root&&!root.classList.contains('hidden')&&!document.hidden&&['dashboard','vendas','metas','historico','anuncios'].includes(tab())&&![...document.querySelectorAll('.modal-overlay,#drawer-overlay')].some(e=>!e.classList.contains('hidden')&&getComputedStyle(e).display!=='none')&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);}
+ function cachedRevision(){const rows=Array.isArray(cache.pedidos)?cache.pedidos:[];const latest=[...rows].sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')))[0];return latest?String(latest.id)+'|'+String(latest.updated_at||''):'';}
+ async function check(){
+  if(busy||!canRefresh()||Date.now()-lastProbe<15000||cache.financialSyncState!=='ready')return;
+  busy=true;lastProbe=Date.now();
+  try{
+   const {data,error}=await sb.from('pedidos').select('id,updated_at').order('updated_at',{ascending:false,nullsFirst:false}).limit(1);
+   if(error)throw error;const row=data?.[0],next=row?String(row.id)+'|'+String(row.updated_at||''):'';
+   const before=revision||cachedRevision();
+   if(next!==before&&canRefresh()){
+    await carregarResumoV95({silent:true});
+    const active=tab();if(active!=='dashboard'&&canRefresh())await carregarAbaV95(active,true);
+    if(typeof perfSaveV95==='function')perfSaveV95();
+    if(cache.financialSyncState==='ready')revision=next;
+   }else revision=next;
+  }catch(error){console.warn('[ERP auto-refresh] Não foi possível verificar novos pedidos.',error?.message||error);}
+  finally{busy=false;}
+ }
+ setInterval(check,30000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
+ window.addEventListener('online',check);
+})();
