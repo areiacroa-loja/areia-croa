@@ -1,5 +1,5 @@
 const fs=require('node:fs'),vm=require('node:vm'),test=require('node:test'),assert=require('node:assert/strict');
-const full=fs.readFileSync(__dirname+'/erp-design.js','utf8');const source=full.slice(full.indexOf('/* Mobile dialogs use one scroll surface'));
+const full=fs.readFileSync(__dirname+'/erp-design.js','utf8');const source=full.slice(full.indexOf('/* Mobile dialogs use one scroll surface'),full.indexOf('/* Peak Chart by Louis'));
 function setup(){
  const observers=[],listeners={},calls=[];const classes=()=>{const items=new Set();return {add:n=>items.add(n),remove:n=>items.delete(n),contains:n=>items.has(n)}};
  const style=()=>{const values=new Map();return {setProperty:(k,v)=>values.set(k,v),removeProperty:k=>values.delete(k),get:k=>values.get(k)}};

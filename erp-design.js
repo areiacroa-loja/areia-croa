@@ -216,3 +216,78 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)check();});
  window.addEventListener('online',check);
 })();
+/* Stock valuation: prices/costs remain canonical; projections never modify sales. */
+function acStockValuation(products,includeInactive=false){
+ const numeric=v=>{if(v===null||v===undefined||v==='')return null;const n=Number(v);return Number.isFinite(n)&&n>=0?n:null;};
+ const seen=new Set(),rows=[];
+ for(const p of products||[]){
+  if(!includeInactive&&p.ativo===false)continue;
+  const quantity=numeric(p.estoque);if(!quantity||quantity<=0)continue;
+  const key=p.yampi_sku_id?'yampi:'+p.yampi_sku_id:'local:'+p.id;if(seen.has(key))continue;seen.add(key);
+  const cost=numeric(p.custo),price=numeric(p.preco),hasCost=cost!==null&&cost>0,hasPrice=price!==null&&price>0;
+  const invested=hasCost?Math.round(cost*100)*quantity:null,revenue=hasPrice?Math.round(price*100)*quantity:null;
+  rows.push({id:p.id,name:String(p.nome||'Produto'),sku:String(p.sku||''),quantity,cost,price,hasCost,hasPrice,invested,revenue,margin:hasCost&&hasPrice?revenue-invested:null,active:p.ativo!==false});
+ }
+ rows.sort((a,b)=>(b.revenue||0)-(a.revenue||0)||a.name.localeCompare(b.name,'pt-BR'));
+ const result={rows,units:0,invested:0,revenue:0,margin:0,missingCost:0,missingPrice:0,completeUnits:0,completeRevenue:0,completeCost:0};
+ for(const r of rows){result.units+=r.quantity;result.invested+=r.invested||0;result.revenue+=r.revenue||0;if(!r.hasCost)result.missingCost+=r.quantity;if(!r.hasPrice)result.missingPrice+=r.quantity;if(r.margin!==null){result.margin+=r.margin;result.completeUnits+=r.quantity;result.completeRevenue+=r.revenue;result.completeCost+=r.invested;}}
+ return result;
+}
+(()=>{
+ 'use strict';let current='catalog',includeInactive=false,query='';
+ const esc=v=>escHtml(String(v??'')),money=cents=>fmtVal(cents/100),qty=v=>Number(v).toLocaleString('pt-BR');
+ function setTab(next){current=next;const catalog=document.getElementById('ac-stock-catalog'),value=document.getElementById('ac-stock-valuation');if(!catalog||!value)return;catalog.hidden=next!=='catalog';value.hidden=next!=='valuation';document.querySelectorAll('[data-stock-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.stockTab===next)));if(next==='valuation')renderValuation();}
+ function renderRows(data){
+  const body=document.getElementById('ac-stock-rows');if(!body)return;
+  const q=query.toLocaleLowerCase('pt-BR'),rows=data.rows.filter(r=>(r.name+' '+r.sku).toLocaleLowerCase('pt-BR').includes(q));
+  body.innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${esc(r.name)}</strong><small>${esc(r.sku||'Sem SKU')}${!r.active?' · Inativo':''}</small></td><td>${qty(r.quantity)}</td><td>${r.hasCost?fmtVal(r.cost):'<span class="ac-stock-warning">Sem custo</span>'}</td><td>${r.hasPrice?fmtVal(r.price):'<span class="ac-stock-warning">Sem preço</span>'}</td><td>${r.invested!==null?money(r.invested):'—'}</td><td>${r.revenue!==null?money(r.revenue):'—'}</td><td class="${r.margin!==null&&r.margin<0?'ac-negative':''}">${r.margin!==null?money(r.margin):'—'}</td><td><button class="btn sm" data-stock-edit="${esc(r.id)}">Revisar</button></td></tr>`).join(''):'<tr><td colspan="8">Nenhum produto com estoque neste filtro.</td></tr>';
+  body.querySelectorAll('[data-stock-edit]').forEach(b=>b.onclick=()=>abrirModalProduto(b.dataset.stockEdit));
+  const count=document.getElementById('ac-stock-count');if(count)count.textContent=rows.length+' de '+data.rows.length+' SKUs · totais acima consideram todo o estoque selecionado.';
+ }
+ function renderValuation(){
+  const root=document.getElementById('ac-stock-valuation');if(!root)return;
+  const data=acStockValuation(cache.produtos||[],includeInactive),partial=data.missingCost>0||data.missingPrice>0;
+  const metric=(label,value,detail)=>`<article class="ac-surface ac-metric"><div class="ac-metric-label">${label}</div><strong>${value}</strong><small>${detail}</small></article>`;
+  root.innerHTML=`<div class="ac-heading"><div><h3>Quanto vale seu estoque hoje?</h3><p>Custo dos produtos disponíveis e projeção de venda pelo preço cadastrado.</p></div><label class="ac-stock-scope">Incluir produtos inativos com estoque <input id="ac-stock-inactive" type="checkbox" ${includeInactive?'checked':''}></label></div><div class="ac-metrics">${metric('Custo do estoque'+(data.missingCost?' · parcial':''),money(data.invested),'Quantidade × custo de compra cadastrado')}${metric('Faturamento potencial'+(data.missingPrice?' · parcial':''),money(data.revenue),'Quantidade × preço de venda cadastrado')}${metric('Margem bruta potencial'+(partial?' · parcial':''),money(data.margin),qty(data.completeUnits)+' de '+qty(data.units)+' peças com custo e preço informados')}${metric('Peças disponíveis',qty(data.units),data.rows.length+' SKUs '+(includeInactive?'ativos e inativos':'ativos'))}</div>${partial?`<div class="ac-stock-alert" role="status"><strong>Há dados a completar.</strong> ${qty(data.missingCost)} peças sem custo e ${qty(data.missingPrice)} sem preço. Os totais são parciais; peças sem custo não geram margem fictícia. Use “Revisar” para completar os cadastros.</div>`:''}<section class="ac-surface ac-stock-projection"><div><span>Se todas as peças com cadastro completo forem vendidas</span><h3>${money(data.completeRevenue)} em vendas</h3><p>Custo desses produtos: ${money(data.completeCost)} · margem bruta: ${money(data.margin)}${data.completeRevenue>0?' ('+(data.margin/data.completeRevenue*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%)':''}.</p></div><p>Projeção antes de frete, taxas, embalagens, anúncios, impostos e descontos. O estoque é o saldo disponível no cadastro, não o histórico de compras.</p></section><div class="ac-stock-filter"><label for="ac-stock-search">Buscar no detalhamento</label><input id="ac-stock-search" placeholder="Produto ou SKU" value="${esc(query)}"><small id="ac-stock-count"></small></div><div class="ac-table-wrap ac-stock-table" tabindex="0" role="region" aria-label="Valor do estoque por produto, deslize para ver todas as colunas"><table class="ac-table"><thead><tr><th>Produto / SKU</th><th>Peças</th><th>Custo unitário</th><th>Preço unitário</th><th>Custo em estoque</th><th>Venda potencial</th><th>Margem bruta</th><th>Ação</th></tr></thead><tbody id="ac-stock-rows"></tbody></table></div>`;
+  renderRows(data);
+  root.querySelector('#ac-stock-search').oninput=e=>{query=e.target.value;renderRows(data);};
+  root.querySelector('#ac-stock-inactive').onchange=e=>{includeInactive=e.target.checked;renderValuation();};
+ }
+ function init(){
+  const panel=document.getElementById('panel-produtos');if(!panel||document.getElementById('ac-stock-tabs'))return;
+  const heading=panel.querySelector('.v106-yampi-status-shell')||panel.querySelector('.page-heading');if(!heading)return;
+  const tabs=document.createElement('div');tabs.id='ac-stock-tabs';tabs.className='ac-stock-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Áreas de produtos');tabs.innerHTML='<button class="btn" role="tab" id="ac-stock-tab-catalog" aria-controls="ac-stock-catalog" aria-selected="true" data-stock-tab="catalog">Catálogo</button><button class="btn" role="tab" id="ac-stock-tab-value" aria-controls="ac-stock-valuation" aria-selected="false" data-stock-tab="valuation">Valor do estoque</button>';
+  const catalog=document.createElement('div');catalog.id='ac-stock-catalog';catalog.setAttribute('role','tabpanel');catalog.setAttribute('aria-labelledby','ac-stock-tab-catalog');
+  [...panel.children].filter(el=>el.matches('.v106-products-toolbar,#lista-produtos,.v106-manual-product')).forEach(el=>catalog.append(el));
+  const value=document.createElement('section');value.id='ac-stock-valuation';value.setAttribute('role','tabpanel');value.setAttribute('aria-labelledby','ac-stock-tab-value');value.hidden=true;
+  heading.after(tabs);tabs.after(catalog);catalog.after(value);
+  tabs.querySelectorAll('button').forEach(b=>{b.onclick=()=>setTab(b.dataset.stockTab);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?'catalog':e.key==='End'?'valuation':current==='catalog'?'valuation':'catalog';setTab(next);tabs.querySelector('[data-stock-tab="'+next+'"]').focus();}};});
+  const original=renderProdutos;renderProdutos=function(...args){const result=original.apply(this,args);renderValuation();return result;};
+  renderValuation();setTab(current);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+/* Neutral white surfaces inherited from legacy modules are converted as they render.
+ * Photographs, logos, canvases and SVG artwork keep their original pixels. */
+(()=>{
+ 'use strict';let scheduled=false;
+ const rgb=text=>{const m=String(text).match(/^rgba?\(([^)]+)\)/);return m?m[1].split(',').map(Number):null;};
+ const luminance=c=>c.slice(0,3).map(v=>v/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((sum,v,i)=>sum+v*[.2126,.7152,.0722][i],0);
+ function normalize(){
+  scheduled=false;if(document.documentElement.dataset.design!=='ac-dark')return;
+  const scope=document.getElementById('app-root');if(!scope)return;
+  const nodes=[...scope.querySelectorAll('div,section,article,header,footer,nav,form,table,thead,tbody,tr,td,th,p,span,small,strong,b,label,button,summary')].filter(e=>e.getClientRects().length&&!e.closest('svg'));
+  document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(modal=>nodes.push(...modal.querySelectorAll('div,p,span,small,strong,b,label,button')));
+  for(const el of nodes){const style=getComputedStyle(el),bg=rgb(style.backgroundColor);if(bg&&bg.slice(0,3).every(v=>v>215)&&(bg.length===3||bg[3]>.95)){el.style.setProperty('background','#152033','important');el.style.setProperty('border-color','#34445d','important');}}
+  for(const el of nodes){
+   if(![...el.childNodes].some(n=>n.nodeType===3&&n.textContent.trim()))continue;
+   const color=rgb(getComputedStyle(el).color);if(!color)continue;
+   let parent=el,bg=[7,9,15];for(let i=0;parent&&i<14;i++,parent=parent.parentElement){const c=rgb(getComputedStyle(parent).backgroundColor);if(c&&(c.length===3||c[3]>.95)){bg=c;break;}}
+   const a=luminance(color),b=luminance(bg),ratio=(Math.max(a,b)+.05)/(Math.min(a,b)+.05);
+   if(b<.15&&ratio<4.5){const [r,g,blue]=color;el.style.setProperty('color',g>r*1.18&&g>blue*1.12?'#85e3c2':r>g*1.25?'#ffacbc':'#c0d0e8','important');}
+  }
+ }
+ function queue(){if(scheduled)return;scheduled=true;setTimeout(normalize,120);}
+ function init(){const app=document.getElementById('app-root');if(!app)return;new MutationObserver(queue).observe(app,{childList:true,subtree:true});document.addEventListener('click',queue);document.addEventListener('change',queue);queue();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
