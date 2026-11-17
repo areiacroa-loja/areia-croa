@@ -194,7 +194,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 (()=>{
  'use strict';let busy=false,revision='',lastProbe=0;
  const tab=()=>typeof perfActiveTabV95==='function'?perfActiveTabV95():'dashboard';
- function canRefresh(){const root=document.getElementById('app-root');return root&&!root.classList.contains('hidden')&&!document.hidden&&['dashboard','vendas','metas','historico','anuncios'].includes(tab())&&![...document.querySelectorAll('.modal-overlay,#drawer-overlay')].some(e=>!e.classList.contains('hidden')&&getComputedStyle(e).display!=='none')&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);}
+ function canRefresh(){const root=document.getElementById('app-root');return root&&!root.classList.contains('hidden')&&!document.hidden&&['dashboard','vendas','metas','historico','anuncios'].includes(tab())&&![...document.querySelectorAll('.modal-overlay,#drawer-overlay')].some(e=>!e.classList.contains('hidden')&&getComputedStyle(e).display!=='none')&&!(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)&&document.activeElement?.closest('form,.form-grid,.modal-overlay'));}
  function cachedRevision(){const rows=Array.isArray(cache.pedidos)?cache.pedidos:[];const latest=[...rows].sort((a,b)=>String(b.updated_at||b.created_at||'').localeCompare(String(a.updated_at||a.created_at||'')))[0];return latest?String(latest.id)+'|'+String(latest.updated_at||''):'';}
  async function check(){
   if(busy||!canRefresh()||Date.now()-lastProbe<15000||cache.financialSyncState!=='ready')return;
