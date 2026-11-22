@@ -34,3 +34,8 @@ test('search matches accent-insensitive name, email and formatted phone',()=>{
   const r=crm.build({clientes:[{id:'a',nome:'João Santos',email:'joao@example.test',telefone:'11988887777'}]});
   assert.equal(crm.search(r.people,'joao').length,1);assert.equal(crm.search(r.people,'JOAO@EXAMPLE').length,1);assert.equal(crm.search(r.people,'(11) 98888-7777').length,1);
 });
+test('recurrence counts distinct paid orders and supports exact two and three-plus filters',()=>{
+ const orders=[{id:1,referencia:'A',canal:'Yampi',cliente_email:'a@example.test',status:'pago',receita:100},{id:9,referencia:'A',canal:'Yampi',cliente_email:'a@example.test',status:'pago',receita:100},{id:2,referencia:'B',canal:'Yampi',cliente_email:'a@example.test',status:'pago',receita:80},{id:3,cliente_email:'a@example.test',status:'cancelado',receita:60},{id:4,cliente_email:'a@example.test',status:'pendente',receita:60}];
+ const r=crm.build({pedidos:orders});assert.equal(r.recurring.length,1);assert.equal(r.recurring[0].purchaseCount,2);assert.equal(r.recurring[0].total,180);assert.equal(crm.purchaseFilter(r.buyers,'twice').length,1);assert.equal(crm.purchaseFilter(r.buyers,'three_plus').length,0);
+ const more=crm.build({pedidos:[...orders,{id:5,referencia:'C',cliente_email:'a@example.test',status:'pago',receita:20}]});assert.equal(crm.purchaseFilter(more.buyers,'twice').length,0);assert.equal(crm.purchaseFilter(more.buyers,'three_plus').length,1);
+});

@@ -53,7 +53,7 @@
     clientes.forEach(c=>get(c,'client'));
     const seen=new Set();
     pedidos.filter(confirmed).forEach((p,i)=>{
-      const key=p.id!=null?'id:'+p.id:p.referencia?'ref:'+p.canal+':'+p.referencia:'row:'+i;
+      const key=p.referencia?'ref:'+text(p.canal)+':'+text(p.referencia):p.id!=null?'id:'+p.id:'row:'+i;
       if(seen.has(key)||!(text(p.cliente_nome)||email(p.cliente_email)||phone(p.cliente_telefone)))return;
       seen.add(key); get(p,'order');
     });
@@ -67,6 +67,8 @@
       else if(crm){p.entry=crm;p.entrySource='Cadastro no CRM';}
       else if(firstCart){p.entry=firstCart;p.entrySource='Primeiro carrinho registrado';}
       else {p.entry=firstOrder;p.entrySource=firstOrder?'Primeira compra registrada':'Data não disponível';}
+      p.purchaseCount=p.orders.length;
+      p.recurring=p.purchaseCount>=2;
       p.lastOrder=latest(p.orders.map(o=>date(o.data)));
       p.total=p.orders.reduce((s,o)=>s+money(o.receita),0);
       p.bought=p.orders.length>0 || p.clients.some(c=>c.tag==='cliente');
@@ -78,7 +80,7 @@
       p.hasCart=!!p.cart;
       p.cartTotal=p.openCarts.reduce((s,c)=>s+money(c.total),0);
     });
-    return {people,buyers:people.filter(p=>p.bought),abandoned:people.filter(p=>p.hasCart),other:people.filter(p=>!p.bought&&!p.hasCart)};
+    return {people,buyers:people.filter(p=>p.bought),recurring:people.filter(p=>p.recurring),abandoned:people.filter(p=>p.hasCart),other:people.filter(p=>!p.bought&&!p.hasCart)};
   }
   function ordered(people, order='newest') {
     return people.slice().sort((a,b)=>{
@@ -93,7 +95,8 @@
     const q=name(query); const digits=text(query).replace(/\D/g,'');
     return !q?people:people.filter(p=>name([p.nome,p.emails.join(' '),p.phones.join(' '),p.cidade,p.estado].join(' ')).includes(q)||(digits.length>=4&&p.phones.some(n=>n.includes(digits))));
   }
-  const model={build,ordered,search,confirmed,phone,date};
+  const purchaseFilter=(people,mode='all')=>people.filter(p=>mode==='returning'?p.orders.length>=2:mode==='twice'?p.orders.length===2:mode==='three_plus'?p.orders.length>=3:true);
+  const model={build,ordered,search,confirmed,phone,date,purchaseFilter};
   if(typeof module==='object'&&module.exports){module.exports=model;return;}
   root.ClientCRM=model;
   if(typeof document==='undefined')return;
@@ -122,33 +125,36 @@
     legacyToolbar.hidden=true;
     document.getElementById('grid-clientes').hidden=true;
     const workspace=document.createElement('div');workspace.id='crm-contact-workspace';
-    workspace.innerHTML=`<div id="crm-contact-stats" class="crm-contact-stats"></div><div class="crm-contact-toolbar"><div class="crm-search"><i class="ti ti-search"></i><input id="crm-contact-query" type="search" aria-label="Buscar contatos" placeholder="Buscar nome, e-mail ou telefone" oninput="filterClientCRM()"></div><label>Ordenar por<select id="crm-contact-sort" onchange="filterClientCRM()"><option value="newest">Entrada mais recente</option><option value="oldest">Entrada mais antiga</option><option value="name">Nome (A–Z)</option></select></label><button class="btn" onclick="exportClientCRM()"><i class="ti ti-download"></i>Exportar lista</button></div><p id="crm-contact-feedback" role="status"></p><div id="crm-buyers-block"></div><div id="crm-carts-block"></div><details class="crm-other-contacts"><summary id="crm-other-summary">Outros contatos</summary><div id="crm-other-block"></div></details>`;
+    workspace.innerHTML=`<div id="crm-contact-stats" class="crm-contact-stats"></div><div class="crm-contact-toolbar"><div class="crm-search"><i class="ti ti-search"></i><input id="crm-contact-query" type="search" aria-label="Buscar contatos" placeholder="Buscar nome, e-mail ou telefone" oninput="filterClientCRM()"></div><label>Compras<select id="crm-contact-purchases" onchange="filterClientCRM()"><option value="all">Todos os clientes</option><option value="returning">Recorrentes · 2 ou mais</option><option value="twice">Compraram 2 vezes</option><option value="three_plus">Compraram 3 ou mais</option></select></label><label>Ordenar por<select id="crm-contact-sort" onchange="filterClientCRM()"><option value="newest">Entrada mais recente</option><option value="oldest">Entrada mais antiga</option><option value="name">Nome (A–Z)</option></select></label><button class="btn" onclick="exportClientCRM()"><i class="ti ti-download"></i>Exportar lista</button></div><p id="crm-contact-feedback" role="status"></p><div id="crm-buyers-block"></div><div id="crm-carts-block"></div><details class="crm-other-contacts"><summary id="crm-other-summary">Outros contatos</summary><div id="crm-other-block"></div></details>`;
     panel.insertBefore(workspace,details);
     return panel;
   }
   function contactCell(p) {
-    return `<div class="crm-contact-cell"><span class="crm-contact-avatar">${esc(iniciais(p.nome))}</span><div><button class="crm-contact-name" onclick="openClientCRMProfile(${p.key})">${esc(p.nome)}</button><small>${esc(p.emails[0] || p.phones[0] || 'Contato não informado')}</small>${p.bought&&p.hasCart?'<span class="crm-mini-label">Cliente com carrinho em aberto</span>':''}</div></div>`;
+    return `<div class="crm-contact-cell"><span class="crm-contact-avatar">${esc(iniciais(p.nome))}</span><div><button class="crm-contact-name" onclick="openClientCRMProfile(${p.key})">${esc(p.nome)}</button><small>${esc(p.emails[0] || p.phones[0] || 'Contato não informado')}</small>${p.recurring?`<span class="crm-repeat-badge">Recorrente · ${p.purchaseCount} compras</span>`:''}${p.bought&&p.hasCart?'<span class="crm-mini-label">Cliente com carrinho em aberto</span>':''}</div></div>`;
   }
   function entryCell(p){return `<time>${businessDate(p.entry)}</time><small>${esc(p.entrySource)}</small>`;}
   function rows(people,kind) {
-    return people.map(p=>`<tr><td>${contactCell(p)}</td><td>${entryCell(p)}</td>${kind==='buyers'?`<td>${businessDate(p.lastOrder)}<small>${p.orders.length?`${p.orders.length} pedido${p.orders.length===1?'':'s'}`:'Compra informada no cadastro'}</small></td><td class="crm-money">${p.orders.length?currency(p.total):'—'}</td>`:kind==='abandoned'?`<td>${businessDate(date(p.cart?.data_criacao))}<small>${p.cart?`${p.openCarts.length} carrinho${p.openCarts.length===1?'':'s'} em aberto`:'Sinalizado no cadastro'}</small></td><td class="crm-money">${p.cart?currency(p.cartTotal):'—'}</td>`:'<td>Contato cadastrado<small>Sem compra ou carrinho confirmado</small></td>'}<td><button class="btn sm" onclick="openClientCRMProfile(${p.key})">Ver contato<i class="ti ti-chevron-right"></i></button></td></tr>`).join('');
+    return people.map(p=>`<tr><td>${contactCell(p)}</td><td>${entryCell(p)}</td>${kind==='buyers'?`<td class="crm-purchase-count">${p.purchaseCount||'—'}<small>${p.recurring?'Recorrente':p.purchaseCount?'Primeira compra':'Compra informada'}</small></td><td>${businessDate(p.lastOrder)}</td><td class="crm-money">${p.orders.length?currency(p.total):'—'}</td>`:kind==='abandoned'?`<td>${businessDate(date(p.cart?.data_criacao))}<small>${p.cart?`${p.openCarts.length} carrinho${p.openCarts.length===1?'':'s'} em aberto`:'Sinalizado no cadastro'}</small></td><td class="crm-money">${p.cart?currency(p.cartTotal):'—'}</td>`:'<td>Contato cadastrado<small>Sem compra ou carrinho confirmado</small></td>'}<td><button class="btn sm" onclick="openClientCRMProfile(${p.key})">Ver contato<i class="ti ti-chevron-right"></i></button></td></tr>`).join('');
   }
   function block(kind,people,title,description) {
     const position=Math.min(offset[kind],Math.max(0,Math.ceil(people.length/pageSize)-1));offset[kind]=position;
     const current=people.slice(position*pageSize,(position+1)*pageSize);
-    return `<section class="crm-contact-block"><div class="crm-block-heading"><div><h3><span class="crm-block-icon ${kind}"><i class="ti ${kind==='buyers'?'ti-shopping-bag':kind==='abandoned'?'ti-shopping-cart':'ti-address-book'}"></i></span>${title}<span class="crm-count">${people.length}</span></h3><p>${description}</p></div></div>${current.length?`<div class="crm-table-scroll"><table><thead><tr><th>Contato</th><th>Entrada</th>${kind==='buyers'?'<th>Última compra</th><th>Total comprado</th>':kind==='abandoned'?'<th>Último carrinho</th><th>Valor em aberto</th>':'<th>Situação</th>'}<th><span class="crm-sr-only">Ações</span></th></tr></thead><tbody>${rows(current,kind)}</tbody></table></div><div class="crm-pagination"><span>${position*pageSize+1}–${position*pageSize+current.length} de ${people.length} contatos</span><div><button class="btn sm" ${position===0?'disabled':''} onclick="pageClientCRM('${kind}',-1)">Anterior</button><button class="btn sm" ${(position+1)*pageSize>=people.length?'disabled':''} onclick="pageClientCRM('${kind}',1)">Próxima</button></div></div>`:`<div class="crm-empty"><i class="ti ${kind==='abandoned'?'ti-shopping-cart-off':'ti-users'}"></i><strong>${loading?'Carregando contatos…':loadError?'Não foi possível carregar esta lista.':'Nenhum contato nesta lista'}</strong><span>${loading?'Consultando os dados sincronizados.':loadError?'Use Atualizar para tentar novamente.':'Altere a busca ou cadastre um novo contato.'}</span></div>`}</section>`;
+    return `<section class="crm-contact-block"><div class="crm-block-heading"><div><h3><span class="crm-block-icon ${kind}"><i class="ti ${kind==='buyers'?'ti-shopping-bag':kind==='abandoned'?'ti-shopping-cart':'ti-address-book'}"></i></span>${title}<span class="crm-count">${people.length}</span></h3><p>${description}</p></div></div>${current.length?`<div class="crm-table-scroll"><table><thead><tr><th>Contato</th><th>Entrada</th>${kind==='buyers'?'<th>Compras pagas</th><th>Última compra</th><th>Total comprado</th>':kind==='abandoned'?'<th>Último carrinho</th><th>Valor em aberto</th>':'<th>Situação</th>'}<th><span class="crm-sr-only">Ações</span></th></tr></thead><tbody>${rows(current,kind)}</tbody></table></div><div class="crm-pagination"><span>${position*pageSize+1}–${position*pageSize+current.length} de ${people.length} contatos</span><div><button class="btn sm" ${position===0?'disabled':''} onclick="pageClientCRM('${kind}',-1)">Anterior</button><button class="btn sm" ${(position+1)*pageSize>=people.length?'disabled':''} onclick="pageClientCRM('${kind}',1)">Próxima</button></div></div>`:`<div class="crm-empty"><i class="ti ${kind==='abandoned'?'ti-shopping-cart-off':'ti-users'}"></i><strong>${loading?'Carregando contatos…':loadError?'Não foi possível carregar esta lista.':'Nenhum contato nesta lista'}</strong><span>${loading?'Consultando os dados sincronizados.':loadError?'Use Atualizar para tentar novamente.':'Altere a busca ou cadastre um novo contato.'}</span></div>`}</section>`;
   }
   renderClientes=function() {
     if(!mounted())return;
     data=model.build({clientes:cache.clientes,pedidos:cache.pedidos,carrinhos:cache.carrinhosAbandonados});
     const q=document.getElementById('crm-contact-query').value, sort=document.getElementById('crm-contact-sort').value;
-    const filtered=kind=>model.ordered(model.search(data[kind],q),sort);
+    const purchaseMode=document.getElementById('crm-contact-purchases').value;
+    const filtered=kind=>model.ordered(model.search(kind==='buyers'?model.purchaseFilter(data[kind],purchaseMode):data[kind],q),sort);
     const totalCarts=data.abandoned.reduce((s,p)=>s+p.cartTotal,0);
-    document.getElementById('crm-contact-stats').innerHTML=`<article><span>Quem já comprou</span><strong>${data.buyers.length}</strong><small>Contatos com compra registrada</small></article><article><span>Carrinhos abandonados</span><strong>${data.abandoned.length}</strong><small>Contatos para recuperação</small></article><article><span>Valor em aberto</span><strong>${currency(totalCarts)}</strong><small>Soma dos carrinhos ativos</small></article>`;
+    document.getElementById('crm-contact-stats').innerHTML=`<article><span>Quem já comprou</span><strong>${data.buyers.length}</strong><small>Contatos com compra registrada</small></article><article><span>Clientes recorrentes</span><strong>${data.recurring.length}</strong><small>Com 2 ou mais pedidos pagos</small></article><article><span>Carrinhos abandonados</span><strong>${data.abandoned.length}</strong><small>Contatos para recuperação</small></article><article><span>Valor em aberto</span><strong>${currency(totalCarts)}</strong><small>Soma dos carrinhos ativos</small></article>`;
     document.getElementById('crm-buyers-block').innerHTML=block('buyers',filtered('buyers'),'Quem já comprou','Histórico de compras e oportunidades de recompra.');
     document.getElementById('crm-carts-block').innerHTML=block('abandoned',filtered('abandoned'),'Carrinhos abandonados','Pessoas que deixaram uma compra em aberto.');
     document.getElementById('crm-other-block').innerHTML=block('other',filtered('other'),'Outros contatos','Cadastros sem compra ou carrinho confirmado.');
     document.getElementById('crm-other-summary').textContent=`Outros contatos (${filtered('other').length})`;
+    document.getElementById('crm-carts-block').hidden=purchaseMode!=='all';
+    document.querySelector('.crm-other-contacts').hidden=purchaseMode!=='all';
     const feedback=document.getElementById('crm-contact-feedback');
     feedback.textContent=loading?'Atualizando contatos…':loadError||'Ordenação pela data indicada em Entrada. Um cliente pode ter um novo carrinho em aberto.';
     feedback.className=loadError?'crm-feedback-error':'';
@@ -166,7 +172,7 @@
     const orders=p.orders.slice().sort((a,b)=>Date.parse(b.data)-Date.parse(a.data));
     const carts=p.openCarts.slice().sort((a,b)=>Date.parse(b.data_criacao)-Date.parse(a.data_criacao));
     const wa=p.phones[0]?'https://wa.me/'+p.phones[0]:'';
-    document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()" aria-label="Fechar contato">×</button><div class="crm-profile-heading"><span class="crm-contact-avatar large">${esc(iniciais(p.nome))}</span><div><h2>${esc(p.nome)}</h2><p>${p.bought?'Já comprou':'Contato'}${p.hasCart?' · Carrinho em aberto':''}</p></div></div><div class="crm-profile-info"><div><span>E-mail</span><strong>${esc(p.emails[0]||'Não informado')}</strong></div><div><span>Telefone</span><strong>${esc(p.phones[0]||'Não informado')}</strong></div><div><span>Entrada</span><strong>${businessDate(p.entry)}</strong><small>${esc(p.entrySource)}</small></div><div><span>Cidade</span><strong>${esc([p.cidade,p.estado].filter(Boolean).join(', ')||'Não informada')}</strong></div></div><div class="crm-profile-history"><h3>Compras (${orders.length})</h3>${orders.length?orders.map(o=>`<div><span>${businessDate(o.data)}<small>${esc(o.canal||'')} · Pedido ${esc(o.referencia||o.id)}</small></span><strong>${currency(o.receita)}</strong></div>`).join(''):'<p>Nenhum pedido vinculado a este contato.</p>'}</div><div class="crm-profile-history"><h3>Carrinhos em aberto (${carts.length})</h3>${carts.length?carts.map(c=>`<div><span>${businessDate(date(c.data_criacao))}<small>${esc(produtosResumoV7(c))}</small></span><strong>${currency(c.total)}</strong></div>`).join(''):'<p>Nenhum carrinho aberto vinculado a este contato.</p>'}</div><div class="modal-actions">${p.clientIds.length?`<button class="btn" onclick="fecharModalItem();openCRMContactForm('${esc(p.clientIds[0])}')"><i class="ti ti-pencil"></i>Editar cadastro</button>`:''}${wa?`<a class="btn primary" href="${wa}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i>Abrir WhatsApp</a>`:''}<button class="btn" onclick="fecharModalItem()">Fechar</button></div>`;
+    document.getElementById('modal-item-conteudo').innerHTML=`<button class="modal-close" onclick="fecharModalItem()" aria-label="Fechar contato">×</button><div class="crm-profile-heading"><span class="crm-contact-avatar large">${esc(iniciais(p.nome))}</span><div><h2>${esc(p.nome)}</h2><p>${p.recurring?'Cliente recorrente · '+p.purchaseCount+' compras':p.bought?'Já comprou':'Contato'}${p.hasCart?' · Carrinho em aberto':''}</p></div></div><div class="crm-profile-info"><div><span>E-mail</span><strong>${esc(p.emails[0]||'Não informado')}</strong></div><div><span>Telefone</span><strong>${esc(p.phones[0]||'Não informado')}</strong></div><div><span>Entrada</span><strong>${businessDate(p.entry)}</strong><small>${esc(p.entrySource)}</small></div><div><span>Cidade</span><strong>${esc([p.cidade,p.estado].filter(Boolean).join(', ')||'Não informada')}</strong></div></div><div class="crm-profile-history"><h3>Compras (${orders.length})</h3>${orders.length?orders.map(o=>`<div><span>${businessDate(o.data)}<small>${esc(o.canal||'')} · Pedido ${esc(o.referencia||o.id)}</small></span><strong>${currency(o.receita)}</strong></div>`).join(''):'<p>Nenhum pedido vinculado a este contato.</p>'}</div><div class="crm-profile-history"><h3>Carrinhos em aberto (${carts.length})</h3>${carts.length?carts.map(c=>`<div><span>${businessDate(date(c.data_criacao))}<small>${esc(produtosResumoV7(c))}</small></span><strong>${currency(c.total)}</strong></div>`).join(''):'<p>Nenhum carrinho aberto vinculado a este contato.</p>'}</div><div class="modal-actions">${p.clientIds.length?`<button class="btn" onclick="fecharModalItem();openCRMContactForm('${esc(p.clientIds[0])}')"><i class="ti ti-pencil"></i>Editar cadastro</button>`:''}${wa?`<a class="btn primary" href="${wa}" target="_blank" rel="noopener"><i class="ti ti-brand-whatsapp"></i>Abrir WhatsApp</a>`:''}<button class="btn" onclick="fecharModalItem()">Fechar</button></div>`;
     abrirModalItem();
   };
   async function allRows(table,order) {

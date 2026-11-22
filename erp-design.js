@@ -9,14 +9,14 @@ const empty=text=>`<div class="ac-empty">${icon('inbox')}<p>${esc(text)}</p></di
 const percent=value=>Number(value).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%';
 function summary(month=''){
  const orders=pedidosBaseV9().filter(p=>!month||getMes(p.data)===month);
- const revenue=orders.reduce((s,p)=>s+Number(p.receita||0),0),cost=orders.reduce((s,p)=>s+custoPedidoV9(p),0),ads=gastoAdsTotal(month),profit=revenue-cost-ads;
- return {orders,revenue,cost,ads,profit,margin:revenue>0?profit/revenue*100:0};
+ const revenue=orders.reduce((s,p)=>s+Number(p.receita||0),0),cost=orders.reduce((s,p)=>s+custoPedidoV9(p),0),ads=gastoAdsTotal(month),expenses=acExpenseSummary(cache.despesas||[],month).operating,profit=revenue-cost-ads-expenses;
+ return {orders,revenue,cost:cost+expenses,orderCost:cost,expenses,ads,profit,margin:revenue>0?profit/revenue*100:0};
 }
 function renderFinancial(){
  if(!$('panel-dashboard'))return;
  const month=$('filter-mes')?.value||'',d=summary(month),total=summary(),label=periodoLabel(month);
  let root=$('ac-financial');if(!root){root=document.createElement('div');root.id='ac-financial';(document.querySelector('.ac-legacy-summary')||$('meta-home')).before(root);}
- if(cache.financialSyncState!=='ready'){
+ if(cache.financialSyncState!=='ready'||cache.expensesReady!==true){
   const failed=cache.financialSyncState==='error';
   root.innerHTML=`<section class="ac-surface ac-hero" role="status"><div><div class="ac-muted">${esc(label)}</div><h2>${failed?'Lucro ainda não confirmado':'Conferindo o lucro…'}</h2><p>${failed?'Não foi possível carregar todos os custos e gastos de mídia. Tente atualizar para conferir o resultado.':'Aguardando vendas, custos e mídia do Supabase para mostrar o resultado completo.'}</p></div>${failed?'<button class="btn" id="ac-retry-finance">Atualizar resumo</button>':''}</section>`;
   if(failed)$('ac-retry-finance').onclick=()=>carregarTudo().catch(()=>{});return;
@@ -25,10 +25,10 @@ function renderFinancial(){
  const segments=[['Custos operacionais',d.cost,'#6e85ae'],['Tráfego pago',d.ads,'#9e8cff'],['Lucro líquido',d.profit,'#5bdbd3']];
  // A negative result cannot be a positive slice of revenue. Keep exact signed figures and explicitly label the alternate denominator.
  const denominator=d.profit<0?Math.max(d.cost+d.ads,1):Math.max(d.revenue,1);
- root.innerHTML=`<section class="ac-surface ac-hero"><div><div class="ac-muted">Lucro líquido ${month?'do mês':'do período'}</div><div class="ac-hero-value ${d.profit<0?'ac-negative':''}">${fmtVal(d.profit)}</div>${badge(d.profit>0?'Positivo':d.profit<0?'Negativo':'Sem resultado',d.profit<0?'error':d.profit>0?'ok':'')} <span class="ac-muted">${esc(label)}</span><small class="ac-finance-confirmed">Vendas, custos e mídia conferidos · ${esc(new Date(cache.financialSyncedAt).toLocaleString('pt-BR',{timeZone:'America/Bahia'}))}</small></div><div class="ac-hero-goal"><div class="ac-muted">Meta de faturamento</div>${target>0?`<div class="ac-goal-value">${percent(progress)} atingida</div><div class="ac-track" role="progressbar" aria-label="Meta de faturamento" aria-valuenow="${Math.min(100,Math.max(0,progress))}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(100,Math.max(0,progress))}%"></span></div><div class="ac-between ac-muted"><span>${fmtVal(d.revenue)} de ${fmtVal(target)}</span><span>${progress>=100?'Meta alcançada':'Faltam '+fmtVal(Math.max(0,target-d.revenue))}</span></div>`:`<p>${month?'Nenhuma meta de faturamento neste mês.':'Selecione um mês para acompanhar sua meta.'}</p><button class="btn" data-ac-tab="metas">${icon('target-arrow')} Ver metas</button>`}</div></section>
- <div class="ac-metrics">${metric('Faturamento',fmtVal(d.revenue),label,'chart-bar')}${metric('Custos operacionais',fmtVal(d.cost),'Produtos, frete, taxas e operação','database')}${metric('Tráfego pago',fmtVal(d.ads),label,'speakerphone')}${metric('Margem líquida',percent(d.margin),label,'percentage')}</div>
+ root.innerHTML=`<section class="ac-surface ac-hero"><div><div class="ac-muted">Lucro líquido ${month?'do mês':'do período'}</div><div class="ac-hero-value ${d.profit<0?'ac-negative':''}">${fmtVal(d.profit)}</div>${badge(d.profit>0?'Positivo':d.profit<0?'Negativo':'Sem resultado',d.profit<0?'error':d.profit>0?'ok':'')} <span class="ac-muted">${esc(label)}</span><small class="ac-finance-confirmed">Vendas, custos, mídia e saídas conferidos · ${esc(new Date(cache.financialSyncedAt).toLocaleString('pt-BR',{timeZone:'America/Bahia'}))}</small></div><div class="ac-hero-goal"><div class="ac-muted">Meta de faturamento</div>${target>0?`<div class="ac-goal-value">${percent(progress)} atingida</div><div class="ac-track" role="progressbar" aria-label="Meta de faturamento" aria-valuenow="${Math.min(100,Math.max(0,progress))}" aria-valuemin="0" aria-valuemax="100"><span style="width:${Math.min(100,Math.max(0,progress))}%"></span></div><div class="ac-between ac-muted"><span>${fmtVal(d.revenue)} de ${fmtVal(target)}</span><span>${progress>=100?'Meta alcançada':'Faltam '+fmtVal(Math.max(0,target-d.revenue))}</span></div>`:`<p>${month?'Nenhuma meta de faturamento neste mês.':'Selecione um mês para acompanhar sua meta.'}</p><button class="btn" data-ac-tab="metas">${icon('target-arrow')} Ver metas</button>`}</div></section>
+ <div class="ac-metrics">${metric('Faturamento',fmtVal(d.revenue),label,'chart-bar')}${metric('Custos operacionais',fmtVal(d.cost),'Pedidos e despesas adicionais pagas','database')}${metric('Tráfego pago',fmtVal(d.ads),label,'speakerphone')}${metric('Margem líquida',percent(d.margin),label,'percentage')}</div>
  <div class="ac-finance-grid"><section class="ac-surface"><h3>Distribuição financeira</h3><p class="ac-muted">${d.profit<0?'Custos e tráfego excederam o faturamento. Barra proporcional às despesas.':'Como o faturamento foi distribuído no período.'}</p><div class="ac-distribution" role="img" aria-label="${esc(segments.map(([n,v])=>n+': '+fmtVal(v)).join('; '))}">${segments.map(([n,v,c])=>`<span title="${esc(n)}: ${fmtVal(v)}" style="width:${Math.max(0,v)/denominator*100}%;background:${c}"></span>`).join('')}</div><div class="ac-legend">${segments.map(([n,v,c])=>`<div><span class="ac-muted"><i class="ac-dot" style="background:${c}"></i>${n}</span><strong class="${v<0?'ac-negative':''}">${fmtVal(v)}</strong><small>${d.revenue>0?percent(v/d.revenue*100)+' do faturamento':'Sem faturamento no período'}</small></div>`).join('')}</div></section>
- <section class="ac-surface"><h3>Resumo do período</h3><p class="ac-muted">Conciliação financeira · ${esc(label)}</p>${[['Receita bruta',d.revenue],['Custos operacionais',-d.cost],['Investimento em anúncios',-d.ads],['Resultado líquido',d.profit]].map(([n,v])=>`<div class="ac-pnl-row"><span>${n}</span><strong class="${v<0?'ac-negative':''}">${v>0?'+ ':''}${fmtVal(v)}</strong></div>`).join('')}</section></div>
+ <section class="ac-surface"><h3>Resumo do período</h3><p class="ac-muted">Conciliação financeira · ${esc(label)}</p>${[['Receita bruta',d.revenue],['Custos dos pedidos',-d.orderCost],['Despesas adicionais pagas',-d.expenses],['Investimento em anúncios',-d.ads],['Resultado líquido',d.profit]].map(([n,v])=>`<div class="ac-pnl-row"><span>${n}</span><strong class="${v<0?'ac-negative':''}">${v>0?'+ ':''}${fmtVal(v)}</strong></div>`).join('')}</section></div>
  <section class="ac-surface ac-accumulated"><h3>Acumulado geral</h3><p class="ac-muted">Todos os meses · visão histórica independente do filtro acima</p><div class="ac-metrics">${metric('Receita total',fmtVal(total.revenue),'Todos os períodos')}${metric('Custos + tráfego',fmtVal(total.cost+total.ads),'Todos os períodos')}${metric('Resultado',fmtVal(total.profit),'Todos os períodos')}${metric('Pedidos',String(total.orders.length),'Pedidos únicos')}${metric('Margem',percent(total.margin),'Todos os períodos')}</div></section>`;
  root.querySelectorAll('[data-ac-tab]').forEach(b=>b.onclick=()=>trocarAba(b.dataset.acTab));
 }
@@ -234,9 +234,26 @@ function acStockValuation(products,includeInactive=false){
  return result;
 }
 (()=>{
- 'use strict';let current='catalog',includeInactive=false,query='';
+ 'use strict';let current='catalog',includeInactive=false,query='',inventoryQuery='',inventorySort='name';
  const esc=v=>escHtml(String(v??'')),money=cents=>fmtVal(cents/100),qty=v=>Number(v).toLocaleString('pt-BR');
- function setTab(next){current=next;const catalog=document.getElementById('ac-stock-catalog'),value=document.getElementById('ac-stock-valuation');if(!catalog||!value)return;catalog.hidden=next!=='catalog';value.hidden=next!=='valuation';document.querySelectorAll('[data-stock-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.stockTab===next)));if(next==='valuation')renderValuation();}
+ function setTab(next){current=next;for(const [key,id] of [['catalog','ac-stock-catalog'],['inventory','ac-stock-inventory'],['valuation','ac-stock-valuation']]){const section=document.getElementById(id);if(section)section.hidden=next!==key;}document.querySelectorAll('[data-stock-tab]').forEach(b=>{const active=b.dataset.stockTab===next;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;});if(next==='valuation')renderValuation();if(next==='inventory')renderInventory();}
+ function renderInventoryRows(){
+  const data=acStockValuation(cache.produtos||[]),q=inventoryQuery.trim().toLocaleLowerCase('pt-BR');
+  const rows=data.rows.filter(r=>(r.name+' '+r.sku).toLocaleLowerCase('pt-BR').includes(q)).sort((a,b)=>inventorySort==='quantity'?b.quantity-a.quantity:a.name.localeCompare(b.name,'pt-BR'));
+  const body=document.getElementById('ac-inventory-rows');if(!body)return;
+  body.innerHTML=rows.length?rows.map(r=>`<tr><td><strong>${esc(r.name)}</strong><small>${esc(r.sku||'Sem SKU')}</small></td><td><span class="ac-inventory-quantity">${qty(r.quantity)} peças</span></td><td>${r.hasCost?fmtVal(r.cost):'<span class="ac-stock-warning">Sem custo</span>'}</td><td>${r.hasPrice?fmtVal(r.price):'Sem preço'}</td><td><button class="btn sm" data-inventory-edit="${esc(r.id)}">Editar produto</button></td></tr>`).join(''):'<tr><td colspan="5">Nenhum produto disponível nesta busca.</td></tr>';
+  body.querySelectorAll('[data-inventory-edit]').forEach(b=>b.onclick=()=>abrirModalProduto(b.dataset.inventoryEdit));
+  document.getElementById('ac-inventory-count').textContent=rows.length+' produtos · '+qty(rows.reduce((n,r)=>n+r.quantity,0))+' peças nesta busca';
+ }
+ function renderInventory(){
+  const root=document.getElementById('ac-stock-inventory');if(!root)return;
+  const d=acStockValuation(cache.produtos||[]);
+  root.innerHTML=`<div class="ac-heading"><div><h3>Produtos em estoque</h3><p>${qty(d.units)} peças disponíveis em ${d.rows.length} SKUs ativos. Saldos do cadastro atual.</p></div><button class="btn" id="ac-inventory-value">Ver valor do estoque</button></div><div class="ac-filter"><label>Buscar produto ou SKU<input id="ac-inventory-search" type="search" placeholder="Nome ou SKU" value="${esc(inventoryQuery)}"></label><label>Ordenar<select id="ac-inventory-sort"><option value="name">Nome do produto</option><option value="quantity">Maior quantidade</option></select></label><span id="ac-inventory-count" role="status"></span></div><div class="ac-table-wrap ac-inventory-table" tabindex="0" role="region" aria-label="Produtos com saldo positivo"><table class="ac-table"><thead><tr><th>Produto / SKU</th><th>Disponível</th><th>Custo unitário</th><th>Preço de venda</th><th>Ação</th></tr></thead><tbody id="ac-inventory-rows"></tbody></table></div>`;
+  document.getElementById('ac-inventory-sort').value=inventorySort;
+  document.getElementById('ac-inventory-search').oninput=e=>{inventoryQuery=e.target.value;renderInventoryRows();};
+  document.getElementById('ac-inventory-sort').onchange=e=>{inventorySort=e.target.value;renderInventoryRows();};
+  document.getElementById('ac-inventory-value').onclick=()=>setTab('valuation');renderInventoryRows();
+ }
  function renderRows(data){
   const body=document.getElementById('ac-stock-rows');if(!body)return;
   const q=query.toLocaleLowerCase('pt-BR'),rows=data.rows.filter(r=>(r.name+' '+r.sku).toLocaleLowerCase('pt-BR').includes(q));
@@ -256,14 +273,14 @@ function acStockValuation(products,includeInactive=false){
  function init(){
   const panel=document.getElementById('panel-produtos');if(!panel||document.getElementById('ac-stock-tabs'))return;
   const heading=panel.querySelector('.v106-yampi-status-shell')||panel.querySelector('.page-heading');if(!heading)return;
-  const tabs=document.createElement('div');tabs.id='ac-stock-tabs';tabs.className='ac-stock-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Áreas de produtos');tabs.innerHTML='<button class="btn" role="tab" id="ac-stock-tab-catalog" aria-controls="ac-stock-catalog" aria-selected="true" data-stock-tab="catalog">Catálogo</button><button class="btn" role="tab" id="ac-stock-tab-value" aria-controls="ac-stock-valuation" aria-selected="false" data-stock-tab="valuation">Valor do estoque</button>';
+  const tabs=document.createElement('div');tabs.id='ac-stock-tabs';tabs.className='ac-stock-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Áreas de produtos');tabs.innerHTML='<button class="btn" role="tab" id="ac-stock-tab-catalog" aria-controls="ac-stock-catalog" aria-selected="true" data-stock-tab="catalog">Catálogo</button><button class="btn" role="tab" id="ac-stock-tab-inventory" aria-controls="ac-stock-inventory" aria-selected="false" data-stock-tab="inventory">Em estoque</button><button class="btn" role="tab" id="ac-stock-tab-value" aria-controls="ac-stock-valuation" aria-selected="false" data-stock-tab="valuation">Valor do estoque</button>';
   const catalog=document.createElement('div');catalog.id='ac-stock-catalog';catalog.setAttribute('role','tabpanel');catalog.setAttribute('aria-labelledby','ac-stock-tab-catalog');
   [...panel.children].filter(el=>el.matches('.v106-products-toolbar,#lista-produtos,.v106-manual-product')).forEach(el=>catalog.append(el));
   const value=document.createElement('section');value.id='ac-stock-valuation';value.setAttribute('role','tabpanel');value.setAttribute('aria-labelledby','ac-stock-tab-value');value.hidden=true;
-  heading.after(tabs);tabs.after(catalog);catalog.after(value);
-  tabs.querySelectorAll('button').forEach(b=>{b.onclick=()=>setTab(b.dataset.stockTab);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const next=e.key==='Home'?'catalog':e.key==='End'?'valuation':current==='catalog'?'valuation':'catalog';setTab(next);tabs.querySelector('[data-stock-tab="'+next+'"]').focus();}};});
-  const original=renderProdutos;renderProdutos=function(...args){const result=original.apply(this,args);renderValuation();return result;};
-  renderValuation();setTab(current);
+  const inventory=document.createElement('section');inventory.id='ac-stock-inventory';inventory.setAttribute('role','tabpanel');inventory.setAttribute('aria-labelledby','ac-stock-tab-inventory');inventory.hidden=true;heading.after(tabs);tabs.after(catalog);catalog.after(inventory);inventory.after(value);
+  tabs.querySelectorAll('button').forEach(b=>{b.onclick=()=>setTab(b.dataset.stockTab);b.onkeydown=e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();const keys=['catalog','inventory','valuation'],next=e.key==='Home'?keys[0]:e.key==='End'?keys[2]:keys[(keys.indexOf(current)+(e.key==='ArrowRight'?1:2))%3];setTab(next);tabs.querySelector('[data-stock-tab="'+next+'"]').focus();}};});
+  const original=renderProdutos;renderProdutos=function(...args){const result=original.apply(this,args);renderValuation();renderInventory();return result;};
+  renderValuation();renderInventory();setTab(current);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
@@ -316,5 +333,61 @@ function acAwardProgress(total){
   }
  }
  function init(){if(!document.getElementById('panel-marcos'))return;if(typeof MARCOS_TIERS!=='undefined'&&Array.isArray(MARCOS_TIERS))MARCOS_TIERS.splice(0,MARCOS_TIERS.length,...AC_AWARD_TIERS.map(t=>t.value));renderMarcosV95=renderAwards;renderMarcos=renderAwards;renderAwards();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+
+/* Named outflows. Cash purchases already included in order costs do not reduce profit twice. */
+function acExpenseSummary(rows,month=''){
+ const selected=(rows||[]).filter(r=>r.status!=='cancelado'&&(!month||String(r.data).slice(0,7)===month));
+ const sum=items=>items.reduce((n,r)=>n+Math.round(Number(r.valor||0)*100),0)/100;
+ return {rows:selected,paid:sum(selected.filter(r=>r.status==='pago')),pending:sum(selected.filter(r=>r.status==='pendente')),operating:sum(selected.filter(r=>r.status==='pago'&&r.afeta_lucro===true)),count:selected.length};
+}
+(()=>{
+ 'use strict';const $=id=>document.getElementById(id),esc=v=>escHtml(String(v??''));
+ const categories={estoque:'Compra de estoque',embalagem:'Embalagens',site:'Mensalidade do site',frete:'Fretes',marketing:'Marketing',servicos:'Serviços e operação',retirada:'Retirada',outros:'Outras despesas'};
+ let editing=null,busy=false,loaded=false,filter={month:'',category:'',status:'',query:''};
+ const options=(items,value='')=>Object.entries(items).map(([key,label])=>`<option value="${key}" ${value===key?'selected':''}>${label}</option>`).join('');
+ async function load(){
+  const rows=[];for(let from=0;;from+=500){const r=await sb.from('erp_despesas').select('*').order('data',{ascending:false}).order('id').range(from,from+499);if(r.error)throw r.error;rows.push(...r.data);if(r.data.length<500)break;}
+  cache.despesas=rows;loaded=true;cache.expensesReady=true;render();return rows;
+ }
+ function selected(){return(cache.despesas||[]).filter(r=>(!filter.month||r.data.slice(0,7)===filter.month)&&(!filter.category||r.categoria===filter.category)&&(!filter.status||r.status===filter.status)&&(!filter.query||(r.nome+' '+r.observacoes).toLocaleLowerCase('pt-BR').includes(filter.query.toLocaleLowerCase('pt-BR'))));}
+ function render(){
+  const root=$('ac-expense-content');if(!root)return;
+  const rows=selected(),d=acExpenseSummary(rows),byCategory=Object.entries(categories).map(([key,label])=>[label,acExpenseSummary(rows.filter(r=>r.categoria===key)).paid]).filter(([,v])=>v>0);
+  root.innerHTML=`<div class="ac-metrics">${[['Saídas pagas',d.paid],['A pagar',d.pending],['Despesas adicionais no lucro',d.operating]].map(([label,value])=>`<article class="ac-surface ac-metric"><div><div class="ac-metric-label">${label}</div><strong>${fmtVal(value)}</strong></div></article>`).join('')}</div><div class="ac-expense-categories">${byCategory.map(([name,value])=>`<span>${esc(name)} <strong>${fmtVal(value)}</strong></span>`).join('')}</div><p class="ac-muted" id="ac-expense-count">${rows.length} registros nesta consulta · compras de estoque e custos já lançados nos pedidos não são descontados novamente.</p><div class="ac-table-wrap" tabindex="0" role="region" aria-label="Despesas registradas"><table class="ac-table ac-expense-table"><thead><tr><th>Despesa</th><th>Destino</th><th>Data</th><th>Valor</th><th>Situação</th><th>No lucro</th><th>Ação</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr><td><strong>${esc(r.nome)}</strong>${r.observacoes?`<small>${esc(r.observacoes)}</small>`:''}</td><td>${esc(categories[r.categoria]||r.categoria)}</td><td>${esc(fmtData(r.data))}</td><td>${fmtVal(r.valor)}</td><td><span class="ac-badge ${r.status==='pago'?'ok':r.status==='cancelado'?'error':'warn'}">${r.status==='pago'?'Pago':r.status==='pendente'?'A pagar':'Cancelado'}</span></td><td>${r.status==='cancelado'?'—':r.afeta_lucro?'Despesa adicional':'Somente saída'}</td><td><button class="btn sm" data-expense-edit="${esc(r.id)}">Editar</button></td></tr>`).join(''):'<tr><td colspan="7">Nenhuma saída registrada nesta consulta.</td></tr>'}</tbody></table></div>`;
+  root.querySelectorAll('[data-expense-edit]').forEach(b=>b.onclick=()=>openForm((cache.despesas||[]).find(r=>r.id===b.dataset.expenseEdit)));
+ }
+ function openForm(row=null){
+  editing=row?.id||null;$('ac-expense-form').hidden=false;$('ac-expense-title').textContent=row?'Editar saída':'Nova saída';
+  for(const [id,value] of Object.entries({'name':row?.nome||'','amount':row?.valor||'','date':row?.data||hoje(),'category':row?.categoria||'site','status':row?.status||'pago','notes':row?.observacoes||''}))$('ac-expense-'+id).value=value;
+  $('ac-expense-profit').checked=row?row.afeta_lucro:true;explain();$('ac-expense-name').focus();
+ }
+ function explain(){const key=$('ac-expense-category').value;$('ac-expense-help').textContent=['estoque','embalagem','frete','marketing'].includes(key)?'Custos já lançados nos produtos, pedidos ou mídia entram no lucro por lá. Mantenha apenas como saída para não contar duas vezes. Este registro não altera quantidades em estoque.':key==='retirada'?'Retirada movimenta o caixa e normalmente não é uma despesa da operação.':'Marque para descontar este gasto pago do lucro no resumo financeiro.';}
+ async function save(e){
+  e.preventDefault();if(busy)return;const form=e.target;if(!form.reportValidity())return;
+  const value=Math.round(Number($('ac-expense-amount').value)*100)/100;if(!(value>0))return;
+  const payload={nome:$('ac-expense-name').value.trim(),categoria:$('ac-expense-category').value,data:$('ac-expense-date').value,valor:value,status:$('ac-expense-status').value,afeta_lucro:$('ac-expense-profit').checked,observacoes:$('ac-expense-notes').value.trim(),updated_at:new Date().toISOString()};
+  if(!payload.nome)return;
+  const duplicate=!editing&&(cache.despesas||[]).some(r=>r.status!=='cancelado'&&r.data===payload.data&&r.nome.toLocaleLowerCase('pt-BR')===payload.nome.toLocaleLowerCase('pt-BR')&&Number(r.valor)===value&&r.categoria===payload.categoria);
+  if(duplicate){$('ac-expense-feedback').textContent='Já existe uma saída com este nome, data, categoria e valor. Confira o lançamento existente.';return;}
+  busy=true;$('ac-expense-save').disabled=true;$('ac-expense-feedback').textContent='Salvando…';
+  try{const result=editing?await sb.from('erp_despesas').update(payload).eq('id',editing).select('id').single():await sb.from('erp_despesas').insert(payload).select('id').single();if(result.error)throw result.error;await load();$('ac-expense-form').hidden=true;editing=null;$('ac-expense-feedback').textContent='Saída salva no Supabase.';renderDashboard();if(typeof perfSaveV95==='function')perfSaveV95();}
+  catch{$('ac-expense-feedback').textContent='Não foi possível salvar. Confira sua conexão e tente novamente.';}finally{busy=false;$('ac-expense-save').disabled=false;}
+ }
+ async function refresh(){const b=$('ac-expense-refresh');if(b)b.disabled=true;try{await load();$('ac-expense-feedback').textContent='Saídas atualizadas.';}catch{$('ac-expense-feedback').textContent='Falha ao carregar as saídas. Tente atualizar.';}finally{if(b)b.disabled=false;}}
+ function init(){
+  const parent=$('panel-historico')?.parentElement;if(!parent||$('panel-saidas'))return;
+  const panel=document.createElement('div');panel.className='panel';panel.id='panel-saidas';panel.innerHTML=`<div class="ac-heading"><div><h2>Saídas</h2><p>Registre cada despesa e acompanhe para onde o dinheiro foi.</p></div><div class="ac-actions"><button class="btn" id="ac-expense-refresh">Atualizar</button><button class="btn primary" id="ac-expense-new">+ Nova saída</button></div></div><p id="ac-expense-feedback" role="status" aria-live="polite"></p><form class="ac-surface ac-expense-form" id="ac-expense-form" hidden><h3 id="ac-expense-title">Nova saída</h3><div class="ac-expense-fields"><label>Nome da despesa<input id="ac-expense-name" maxlength="160" required placeholder="Ex.: Mensalidade Shopify"></label><label>Destino<select id="ac-expense-category">${options(categories,'site')}</select></label><label>Valor (R$)<input id="ac-expense-amount" type="number" min="0.01" step="0.01" required></label><label>Data<input id="ac-expense-date" type="date" required></label><label>Situação<select id="ac-expense-status"><option value="pago">Pago</option><option value="pendente">A pagar</option><option value="cancelado">Cancelado</option></select></label><label>Observação<input id="ac-expense-notes" maxlength="1000" placeholder="Fornecedor, referência ou detalhe"></label></div><label class="ac-expense-check"><input id="ac-expense-profit" type="checkbox">Reduzir lucro como despesa adicional</label><p class="ac-muted" id="ac-expense-help"></p><div class="ac-actions"><button class="btn primary" id="ac-expense-save" type="submit">Salvar saída</button><button class="btn" id="ac-expense-close" type="button">Fechar</button></div></form><div class="ac-filter"><label>Buscar despesa<input id="ac-expense-search" type="search" placeholder="Nome ou observação"></label><label>Mês<input id="ac-expense-month" type="month"></label><label>Destino<select id="ac-expense-filter-category"><option value="">Todos os destinos</option>${options(categories)}</select></label><label>Situação<select id="ac-expense-filter-status"><option value="">Todas</option><option value="pago">Pago</option><option value="pendente">A pagar</option><option value="cancelado">Cancelado</option></select></label><button class="btn" id="ac-expense-clear">Limpar filtros</button></div><div id="ac-expense-content"></div>`;
+  parent.append(panel);
+  for(const selector of ['.side-nav-item[data-tab="historico"]','.drawer-item[data-tab="historico"]']){const anchor=document.querySelector(selector);if(anchor){const b=document.createElement('button');b.className=anchor.className.replace('active','');b.dataset.tab='saidas';b.innerHTML='<i class="ti ti-wallet"></i><span>Saídas</span>';b.onclick=()=>{trocarAba('saidas');if(selector.startsWith('.drawer'))fecharDrawer();};anchor.before(b);}}
+  $('ac-expense-new').onclick=()=>openForm();$('ac-expense-close').onclick=()=>{$('ac-expense-form').hidden=true;editing=null;};$('ac-expense-refresh').onclick=refresh;$('ac-expense-form').onsubmit=save;
+  $('ac-expense-category').onchange=()=>{$('ac-expense-profit').checked=['site','servicos','outros'].includes($('ac-expense-category').value);explain();};
+  for(const [id,key] of [['search','query'],['month','month'],['filter-category','category'],['filter-status','status']])$('ac-expense-'+id)[id==='search'?'oninput':'onchange']=e=>{filter[key]=e.target.value;render();};
+  $('ac-expense-clear').onclick=()=>{filter={month:'',category:'',status:'',query:''};['search','month','filter-category','filter-status'].forEach(id=>$('ac-expense-'+id).value='');render();};render();load().then(()=>renderDashboard()).catch(()=>{$('ac-expense-feedback').textContent='Atualize para carregar as saídas.';});
+ }
+ const baseLoad=carregarAbaV95;carregarAbaV95=async function(id,...args){if(id==='saidas'){await load();return;}return baseLoad.call(this,id,...args);};
+ const baseTab=trocarAba;trocarAba=function(id,...args){const result=baseTab.call(this,id,...args);if(id==='saidas'){if($('page-title'))$('page-title').textContent='Saídas';if($('page-kicker'))$('page-kicker').textContent='CONTROLE FINANCEIRO';if(!loaded)refresh();}return result;};
+ const baseSummary=carregarResumoV95;carregarResumoV95=async function(...args){cache.expensesReady=false;const results=await Promise.allSettled([baseSummary.apply(this,args),load()]);if(results.some(r=>r.status==='rejected')){cache.expensesReady=false;renderDashboard();throw new Error('Não foi possível conferir as saídas financeiras.');}cache.expensesReady=true;renderDashboard();return results[0].value;};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
