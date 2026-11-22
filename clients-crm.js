@@ -195,7 +195,7 @@
   root.refreshClientCRM=async()=>{try{await load();}catch{};};
   root.exportClientCRM=()=>{
     const q=document.getElementById('crm-contact-query').value,sort=document.getElementById('crm-contact-sort').value;
-    const people=model.ordered(model.search(data.people,q),sort);
+    const mode=document.getElementById('crm-contact-purchases')?.value||'all';const people=model.ordered(model.purchaseFilter(model.search(data.people,q),mode),sort);
     const rows=[['Nome','E-mail','Telefone','Entrada','Fonte da data','Já comprou','Carrinho em aberto','Pedidos','Total comprado','Valor dos carrinhos'],...people.map(p=>[p.nome,p.emails[0]||'',p.phones[0]||'',p.entry,p.entrySource,p.bought?'Sim':'Não',p.hasCart?'Sim':'Não',p.orders.length,p.total,p.cartTotal])];
     const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""').replace(/^[=+@-]/,"'$&")+'"').join(';')).join('\r\n');
     const url=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='areia-croa-contatos.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
